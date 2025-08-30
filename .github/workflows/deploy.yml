@@ -1,0 +1,42 @@
+name: Deploy Archipelago to Oracle Cloud
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: '18.x'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm install
+
+    - name: Build frontend
+      run: npm run build --if-present
+
+    - name: Setup SSH
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.ORACLE_SSH_KEY }}" > ~/.ssh/oracle_key
+        chmod 600 ~/.ssh/oracle_key
+        ssh-keyscan -H "132.226.223.180" >> ~/.ssh/known_hosts
+
+    - name: Deploy to Oracle Cloud
+      run: |
+        scp -i ~/.ssh/oracle_key -r . opc@132.226.223.180:~/archipelago
+        ssh -i ~/.ssh/oracle_key opc@132.226.223.180 'cd ~/archipelago && npm install --production'
+        ssh -i ~/.ssh/oracle_key opc@132.226.223.180 'cd ~/archipelago && pm2 restart archipelago || pm2 start src/backend/server.js --name archipelago'
+        ssh -i ~/.ssh/oracle_key opc@132.226.223.180 'pm2 save'

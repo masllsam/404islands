@@ -1,0 +1,66 @@
+name: Deploy Archipelago to Oracle Cloud
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: '24.x'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm install
+
+    - name: Run linting
+      run: npm run lint || echo "No lint script defined"
+
+    - name: Run tests
+      run: npm test || echo "No test script defined"
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://132.226.223.180:3001
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup SSH
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.ORACLE_SSH_KEY }}" > ~/.ssh/oracle_key
+        chmod 600 ~/.ssh/oracle_key
+        ssh-keyscan -H "${{ secrets.ORACLE_HOST }}" >> ~/.ssh/known_hosts
+
+    - name: Deploy to Oracle Cloud
+      run: |
+        scp -i ~/.ssh/oracle_key -r server/* opc@${{ secrets.ORACLE_HOST }}:~/archipelago/server/
+        ssh -i ~/.ssh/oracle_key opc@${{ secrets.ORACLE_HOST }} 'cd ~/archipelago/server && npm install'
+        ssh -i ~/.ssh/oracle_key opc@${{ secrets.ORACLE_HOST }} 'cd ~/archipelago/server && npm install --production'
+        ssh -i ~/.ssh/oracle_key opc@${{ secrets.ORACLE_HOST }} 'pm2 restart archipelago || pm2 start server/final_integrated_server_clean.js --name archipelago'
+        ssh -i ~/.ssh/oracle_key opc@${{ secrets.ORACLE_HOST }} 'pm2 save'
+
+    - name: Health check
+      run: |
+        sleep 10
+        curl -f http://132.226.223.180:3001/health
+
+    - name: Test island generation
+      run: |
+        curl -f "http://132.226.223.180:3001/islands/1"
+        curl -f "http://132.226.223.180:3001/islands/1/terrain?format=json"

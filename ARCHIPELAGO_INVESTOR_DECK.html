@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+  <title>🏝️ Project Archipelago - Investor Presentation</title>
+
+  <!-- Reveal.js CSS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.6.1/dist/reveal.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.6.1/dist/theme/black.css" id="theme">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.6.1/plugin/highlight/monokai.css">
+
+  <!-- Island aesthetic CSS -->
+  <style>
+    /* Island palette: Sea, Sky, Shore tones */
+    :root {
+      --sea-deep: #002137;
+      --sea-medium: #006994;
+      --sea-shallow: #4FB3D9;
+      --shores: #C5E1C5;
+      --meadows: #E8F5E8;
+      --sky-light: #F0F8FF;
+      --accent-primary: #34A853;
+      --accent-secondary: #4285F4;
+      --text-light: #ffffff;
+      --text-dark: #1a237e;
+    }
+
+    body {
+      font-family: 'Segoe UI', 'Roboto', 'Helvetica', sans-serif;
+      background: linear-gradient(135deg, var(--sea-deep) 0%, var(--sea-medium) 50%, var(--sky-light) 100%);
+    }
+
+    .slides {
+      background: transparent;
+    }
+
+    .reveal .slide {
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 10px;
+      margin: 20px;
+      box-shadow: 0 0 50px rgba(0, 33, 55, 0.3);
+      backdrop-filter: blur(10px);
+    }
+
+    /* Typography hierarchy */
+    .reveal h1, .reveal h2, .reveal h3 {
+      color: var(--text-dark);
+      font-weight: 300;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .reveal h1 {
+      font-size: 3.5rem;
+      background: linear-gradient(45deg, var(--accent-primary), var(--accent-secondary));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 0.5rem;
+    }
+
+    .reveal h2 {
+      font-size: 2.1rem;
+      color: var(--accent-secondary);
+      border-left: 4px solid var(--accent-primary);
+      padding-left: 1rem;
+    }
+
+    .reveal h3 {
+      font-size: 1.4rem;
+      color: var(--sea-deep);
+    }
+
+    .reveal p {
+      color: var(--text-dark);
+      font-size: 1.4rem;
+      line-height: 1.6;
+    }
+
+    /* Visual elements */
+    .island-animation {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 300px;
+      height: 200px;
+      background: linear-gradient(45deg, var(--shores), var(--meadows));
+      border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+      box-shadow: 0 10px 40px rgba(0,33,55,0.3);
+      animation: breathe 4s ease-in-out infinite alternate;
+    }
+
+    @keyframes breathe {
+      0% { transform: translate(-50%, -50%) scale(1); }
+      100% { transform: translate(-50%, -50%) scale(1.05); }
+    }
+
+    /* Data visualization styles */
+    .chart-container {
+      background: rgba(255, 255, 255, 0.8);
+      border-radius: 10px;
+      padding: 20px;
+      margin: 20px 0;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    }
+
+    .metric-large {
+      font-size: 3rem;
+      font-weight: bold;
+      color: var(--accent-primary);
+      text-align: center;
+    }
+
+    /* Transition effects */
+    .reveal .slide {
+      transition: transform 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    }
+
+    .reveal .slide h1,
+    .reveal .slide h2,
+    .reveal .slide h3,
+    .reveal .slide p {
+      opacity: 0;
+      animation: fadeInUp 0.8s ease forwards;
+    }
+
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Investor's perspective styling */
+    .investor-highlight {
+      background: linear-gradient(45deg, var(--accent-primary), var(--accent-secondary));
+      color: white;
+      padding: 1rem;
+      border-radius: 10px;
+      margin: 1rem 0;
+      font-size: 1.2rem;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    }
+
+    /* Technical diagram styling */
+    .tech-diagram {
+      background: var(--sky-light);
+      border-radius: 10px;
+      padding: 20px;
+      margin: 20px 0;
+      border: 2px solid var(--sea-shallow);
+    }
+  </style>
+</head>
+<body>
+  <div class="reveal">
+    <div class="slides">
+      <!-- Title Slide -->
+      <section>
+        <div class="island-animation"></div>
+        <h1>🏝️ Project Archipelago</h1>
+        <h2>Living Islands That Breathe & Evolve Forever</h2>
+
+        <div class="investor-highlight">
+          <strong>$10B Digital Collectibles Market Opportunity</strong><br>
+          Zero-lag 60fps Performance Across All Devices
+        </div>
+
+        <br><br>
+        <h3>Investor Presentation - Phase 6</h3>
+        <p><em>Transforming Mathematical Artistry into Digital Heritage</em></p>
+      </section>
+      <!-- Team Introduction -->
+      <section>
+        <h2>🌟 Archipelago Founding Team</h2>
+
+        <div class="chart-container">
+          <h3>Technical Leadership</h3>
+          <ul>
+            <li><strong>Lead Developer:</strong> 15+ years mathematical modeling expertise</li>
+            <li><strong>Computer Graphics:</strong> PhD-level algorithms optimization</li>
+            <li><strong>Web Performance:</strong> Zero-lag 60fps applications</li>
+          </ul>
+
+          <h3>Artistic Direction</h3>
+          <ul>
+            <li><strong>Nature Physics:</strong> Computational biology background</li>
+            <li><strong>Digital Sculpting:</strong> Procedural art specialization</li>
+            <li><strong>User Experience:</strong> Intuitive living system interfaces</li>
+          </ul>
+        </div>
+
+        <div class="investor-highlight">
+          "Unique blend of mathematical rigor and artistic vision"
+        </div>
+      </section>
+
+      <!-- Market Opportunity -->
+      <section>
+        <h2>🚀 $10B+ Market Opportunity</h2>
+
+        <div class="chart-container">
+          <div class="metric-large">$28B<br><small>Global NFT Market (2024)</small></div>
+
+          <h3>Digital Collectibles Segments</h3>
+          <ul>
+            <li><strong>Gaming NFTs:</strong> $16B (Axie Infinity, Sorare)</li>
+            <li><strong>Art & Collectibles:</strong> $7B (CryptoPunks, BAYC)</li>
+            <li><strong>Pixel Art:</strong> $3B (World of Women, Pudgy Penguins)</li>
+            <li><strong><u>Living Art:</u></strong> <em>$10B+ opportunity</em></li>
+          </ul>
+        </div>
+
+        <div class="investor-highlight">
+          Dynamic collections representing $35% of NFT market value
+        </div>
+      </section>
+
+      <!-- Problem Statement -->
+      <section>
+        <h2>❓ The Static Art Challenge</h2>
+
+        <div class="chart-container">
+          <h3>Traditional Digital Art Limitations</h3>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+            <div>
+              <h4>Static Assets</h4>
+              <p>Images, videos, 3D models</p>
+              <p>"Take screenshot to capture moment"</p>
+              <p>❌ No ongoing value appreciation</p>
+            </div>
+
+            <div>
+              <h4>Limited Ownership</h4>
+              <p>One-time purchase decisions</p>
+              <p>Resale value: unpredictable</p>
+              <p>❌ No eternal stewardship narrative</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="investor-highlight">
+          <strong>$27B</strong> in 'static' NFT assets waiting for dynamic evolution
+        </div>
+      </section>
+
+      <!-- Our Solution -->
+      <section>
+        <h2>💡 Living Islands Solution</h2>
+
+        <div class="island-animation"></div>
+
+        <div class="chart-container">
+          <h3>What Makes Islands Live?</h3>
+
+          <ul>
+            <li><strong>Eternal Evolution:</strong> Islands age and develop infinitely</li>
+            <li><strong>Individual Personalities:</strong> 404 unique behavioral patterns</li>
+            <li><strong>Real-time Physics:</strong> Weather, seasons, catastrophic events</li>
+            <li><strong>Stewardship Value:</strong> Owners influence island destiny</li>
+            <li><strong>Ecosystem Dynamics:</strong> Vegetation, wildlife, geology shifts</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- Technology Stack Overview -->
+      <section>
+        <h2>🛠️ Technology Stack Overview</h2>
+
+        <div class="tech-diagram">
+          <h3>Zero-Lag Performance Architecture</h3>
+
+          <div style="text-align: center; margin: 20px 0;">
+            <div style="background: white; padding: 20px; border-radius: 10px; border: 2px solid var(--accent-primary);">
+              <strong>60fps Rendering Engine</strong><br>
+              Browser + Canvas + WebGL
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
+            <div style="background: white; padding: 10px; border-radius: 5px;">
+              <strong>Frontend:</strong><br>React + TypeScript
+            </div>
+            <div style="background: white; padding: 10px; border-radius: 5px;">
+              <strong>Backend:</strong><br>Node.js + Oracle Cloud
+            </div>
+            <div style="background: white; padding: 10px; border-radius: 5px;">
+              <strong>Database:</strong><br>Oracle Autonomous JSON
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- Reveal.js JavaScript -->
+  <script src="https://cdn.jsdelivr.net/npm/reveal.js@4.6.1/dist/reveal.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/reveal.js@4.6.1/plugin/notes/notes.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/reveal.js@4.6.1/plugin/markdown/markdown.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/reveal.js@4.6.1/plugin/highlight/highlight.js"></script>
+
+  <!-- Presentation initialization -->
+  <script>
+    Reveal.initialize({
+      hash: true,
+      controls: true,
+      progress: false,
+      center: true,
+      transition: 'slide', // fade, slide, convex, concave, zoom
+      backgroundTransition: 'fade',
+      controlsTutorial: false,
+
+      // Presentational mode
+      controlsTutor: false,
+      controlsLayout: 'edges',
+      controlsBackArrows: 'hover',
+
+      // Multimedia
+      mouseWheel: false,
+      previewLinks: true,
+
+      plugins: [RevealNotes, RevealMarkdown, RevealHighlight]
+    });
+
+    // Presentation analytics
+    Reveal.on('ready', event => {
+      console.log('🏝️ Archipelago Investor Deck initialized');
+      console.log(`📊 Total slides: ${Reveal.getTotalSlides()}`);
+      console.log('🚀 Ready for $1.5M seed funding presentation');
+    });
+  </script>
+</body>
+</html>

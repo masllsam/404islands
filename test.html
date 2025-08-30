@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Archipelago Mathematical Engine Test Suite</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            color: white;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .test-section {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            border-left: 4px solid #4ade80;
+        }
+
+        .test-section.fail {
+            border-left-color: #f87171;
+        }
+
+        .pass {
+            color: #4ade80;
+        }
+
+        .fail {
+            color: #f87171;
+        }
+
+        .metric {
+            background: rgba(0,0,0,0.2);
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .status {
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+
+        pre {
+            background: rgba(0,0,0,0.3);
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        button {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+            transition: transform 0.2s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+
+        .progress-bar {
+            background: rgba(255,255,255,0.2);
+            height: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4ade80, #22d3ee);
+            transition: width 0.3s ease;
+        }
+
+        .browser-info {
+            background: rgba(66, 153, 225, 0.2);
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+
+        .alert {
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 8px;
+            font-weight: bold;
+        }
+
+        .alert.success {
+            background: rgba(72, 187, 120, 0.2);
+            border-left: 4px solid #48bb78;
+        }
+
+        .alert.error {
+            background: rgba(245, 101, 101, 0.2);
+            border-left: 4px solid #f56565;
+        }
+
+        .alert.warning {
+            background: rgba(237, 137, 54, 0.2);
+            border-left: 4px solid #ed8936;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏝️ Archipelago Mathematical Engine Test Suite</h1>
+
+        <div class="browser-info">
+            <h3>🌐 Browser Environment</h3>
+            <p><strong>Browser:</strong> <span id="browser">Detecting...</span></p>
+            <p><strong>Platform:</strong> <span id="platform">Detecting...</span></p>
+            <p><strong>WebGL:</strong> <span id="webgl">Testing...</span></p>
+            <p><strong>Float32Array:</strong> <span id="typedArrays">Testing...</span></p>
+            <p><strong>ES6 Modules:</strong> <span id="es6Modules">Testing...</span></p>
+        </div>
+
+        <div class="controls">
+            <button onclick="runFullSuite()">🚀 Run Full Test Suite</button>
+            <button onclick="runPerformanceTests()">⚡ Performance Only</button>
+            <button onclick="runCrossBrowserTests()">🌐 Browser Compatibility</button>
+            <button onclick="generateTestIsland()">🏋️ Generate Test Island</button>
+        </div>
+
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+        </div>
+
+        <div id="testResults"></div>
+
+        <div class="alert success" id="successAlert" style="display: none;">
+            ✅ All tests passed! Mathematical engine is ready for production.
+        </div>
+
+        <div class="alert error" id="errorAlert" style="display: none;">
+            ❌ Some tests failed. Check the detailed results above.
+        </div>
+    </div>
+
+    <script type="module">
+        import { islandGenerator } from './IslandGenerator.js';
+        import { PerlinNoise } from './PerlinNoise.js';
+        import { FractionalBrownianMotion } from './FractionalBrownianMotion.js';
+
+        let testResults = [];
+        let currentBrowser = '';
+
+        // Browser detection and info
+        function detectBrowser() {
+            const ua = navigator.userAgent;
+            const platform = navigator.platform;
+
+            currentBrowser = ua.includes('Chrome') ? 'Chrome' :
+                           ua.includes('Firefox') ? 'Firefox' :
+                           ua.includes('Safari') ? 'Safari' :
+                           ua.includes('Edge') ? 'Edge' : 'Unknown';
+
+            document.getElementById('browser').textContent = currentBrowser;
+            document.getElementById('platform').textContent = platform;
+            document.getElementById('webgl').textContent = testWebGL() ? '✅ Supported' : '❌ Not Supported';
+            document.getElementById('typedArrays').textContent = typeof Float32Array !== 'undefined' ? '✅ Supported' : '❌ Not Supported';
+            document.getElementById('es6Modules').textContent = '✅ Supported';
+        }
+
+        function testWebGL() {
+            try {
+                const canvas = document.createElement('canvas');
+                return !!(canvas.getContext('webgl') || canvas.getContext('experimental-webgl'));
+            } catch (e) {
+                return false;
+            }
+        }
+
+        function updateProgress(percent) {
+            document.getElementById('progressFill').style.width = percent + '%';
+        }
+
+        function addResult(name, status, details = '', data = null) {
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `test-section ${status ? '' : 'fail'}`;
+            resultDiv.innerHTML = `
+                <h4 class="status ${status ? 'pass' : 'fail'}">${status ? '✅' : '❌'} ${name}</h4>
+                ${details ? `<pre>${details}</pre>` : ''}
+                ${data ? `<div class="metrics-grid">${JSON.stringify(data, null, 2)}</div>` : ''}
+            `;
+            document.getElementById('testResults').appendChild(resultDiv);
+        }
+
+        // Test functions
+        async function runPerformanceTests() {
+            updateProgress(0);
+            document.getElementById('testResults').innerHTML = '';
+
+            const results = {
+                initializationTime: 0,
+                accessTime: 0,
+                memoryMB: 0,
+                perlinTime: 0,
+                fbmTime: 0
+            };
+
+            // Test island access time
+            updateProgress(20);
+            const islandId = 0;
+            const iterations = 100;
+            let totalTime = 0;
+
+            const accessTimes = [];
+            for (let i = 0; i < iterations; i++) {
+                const start = performance.now();
+                const island = islandGenerator.getIsland(islandId);
+                const end = performance.now();
+                const time = end - start;
+                accessTimes.push(time);
+                totalTime += time;
+            }
+
+            results.accessTime = totalTime / iterations;
+            const maxAccessTime = Math.max(...accessTimes);
+            const minAccessTime = Math.min(...accessTimes);
+
+            addResult(
+                'Island Access Performance',
+                results.accessTime < 1,
+                `Average: ${results.accessTime.toFixed(4)}ms\nMax: ${maxAccessTime.toFixed(4)}ms\nMin: ${minAccessTime.toFixed(4)}ms\nTarget: <1ms per island`,
+                { average: results.accessTime, max: maxAccessTime, min: minAccessTime }
+            );
+
+            // Test Perlin noise performance
+            updateProgress(40);
+            const perlin = new PerlinNoise(42);
+            const perlinIterations = 10000;
+            totalTime = 0;
+
+            for (let i = 0; i < perlinIterations; i++) {
+                const start = performance.now();
+                perlin.noise2D(i * 0.01, i * 0.01);
+                const end = performance.now();
+                totalTime += end - start;
+            }
+
+            results.perlinTime = totalTime / perlinIterations;
+            addResult(
+                'Perlin Noise Generation',
+                results.perlinTime < 0.01,
+                `Average: ${results.perlinTime.toFixed(4)}ms per call\nTarget: <0.01ms per call`,
+                results
+            );
+
+            // Test fBm performance
+            updateProgress(60);
+            const fbm = new FractionalBrownianMotion(42);
+            const fbmIterations = 1000;
+            totalTime = 0;
+
+            for (let i = 0; i < fbmIterations; i++) {
+                const start = performance.now();
+                fbm.noise2D(i * 0.01, i * 0.01);
+                const end = performance.now();
+                totalTime += end - start;
+            }
+
+            results.fbmTime = totalTime / fbmIterations;
+            addResult(
+                'fBm Generation',
+                results.fbmTime < 0.1,
+                `Average: ${results.fbmTime.toFixed(4)}ms per call\nTarget: <0.1ms per call`,
+                results
+            );
+
+            // Memory usage test
+            updateProgress(80);
+            results.memoryMB = islandGenerator.getTotalMemoryUsage() / (1024 * 1024);
+            addResult(
+                'Memory Usage',
+                results.memoryMB < 32,
+                `Total: ${results.memoryMB.toFixed(2)}MB\nPer Island: ${(results.memoryMB * 1024 * 1024 / 404).toFixed(0)} bytes\nBudget: 32MB`,
+                results
+            );
+
+            // Overall performance assessment
+            updateProgress(100);
+            const performanceTargets = {
+                'Access Time <1ms': results.accessTime < 1,
+                'Perlin Time <0.01ms': results.perlinTime < 0.01,
+                'FBm Time <0.1ms': results.fbmTime < 0.1,
+                'Memory <32MB': results.memoryMB < 32
+            };
+
+            addResult(
+                'Performance Summary',
+                Object.values(performanceTargets).every(Boolean),
+                Object.entries(performanceTargets).map(([name, met]) => `${met ? '✅' : '❌'} ${name}`).join('\n'),
+                performanceTargets
+            );
+
+            // Show success/error alerts
+            const allPassed = Object.values(performanceTargets).every(Boolean);
+            document.getElementById('successAlert').style.display = allPassed ? 'block' : 'none';
+            document.getElementById('errorAlert').style.display = allPassed ? 'none' : 'block';
+
+            return results;
+        }
+
+        async function runCrossBrowserTests() {
+            updateProgress(0);
+            document.getElementById('testResults').innerHTML = '';
+
+            // Browser feature detection tests
+            const features = {
+                'ES6 Classes': true, // If this file loads, ES6 is supported
+                'Float32Array': typeof Float32Array !== 'undefined',
+                'Performance API': typeof performance !== 'undefined' && performance.now,
+                'Math.random': typeof Math.random === 'function',
+                'WebGL': testWebGL(),
+                'Canvas 2D': (() => {
+                    try {
+                        const canvas = document.createElement('canvas');
+                        return !!canvas.getContext('2d');
+                    } catch (e) {
+                        return false;
+                    }
+                })(),
+                'fetch': typeof fetch !== 'undefined',
+                'Promise': typeof Promise !== 'undefined'
+            };
+
+            updateProgress(50);
+            addResult(
+                'Browser Feature Detection',
+                Object.values(features).every(Boolean),
+                Object.entries(features).map(([name, supported]) =>
+                    `${supported ? '✅' : '❌'} ${name}${supported ? '' : ' - NOT SUPPORTED'}`
+                ).join('\n'),
+                features
+            );
+
+            // Test module loading
+            updateProgress(100);
+            addResult(
+                'Module Loading',
+                true,
+                '✅ ES6 Modules successfully imported\n✅ IslandGenerator module available\n✅ PerlinNoise module available\n✅ FractionalBrownianMotion module available',
+                { modules: ['IslandGenerator', 'PerlinNoise', 'FractionalBrownianMotion'] }
+            );
+
+            // Cross-browser alert
+            if (currentBrowser === 'Unknown') {
+                alert('⚠️ Warning: Browser not recognized. Some features may not work as expected.');
+            }
+        }
+
+        async function generateTestIsland() {
+            updateProgress(0);
+            document.getElementById('testResults').innerHTML = '';
+
+            try {
+                const island = islandGenerator.getIsland(0);
+
+                updateProgress(50);
+
+                // Basic island validation
+                const stats = {
+                    id: island.id,
+                    points: island.heightmap.length,
+                    resolved: island.heightmap.length === (128 * 128),
+                    averageHeight: island.heightmap.reduce((sum, val) => sum + val, 0) / island.heightmap.length,
+                    minHeight: Math.min(...island.heightmap),
+                    maxHeight: Math.max(...island.heightmap)
+                };
+
+                updateProgress(80);
+
+                addResult(
+                    'Test Island Generation',
+                    stats.resolved,
+                    `Island ID: ${stats.id}\nTotal Points: ${stats.points}\nAverage Height: ${stats.averageHeight.toFixed(3)}\nHeight Range: ${stats.minHeight.toFixed(3)} - ${stats.maxHeight.toFixed(3)}\nExpected Size: ${(128 * 128).toLocaleString()}`,
+                    stats
+                );
+
+                // Test island consistency
+                const island2 = islandGenerator.getIsland(0);
+                let consistent = true;
+                for (let i = 0; i < island.heightmap.length; i++) {
+                    if (island.heightmap[i] !== island2.heightmap[i]) {
+                        consistent = false;
+                        break;
+                    }
+                }
+
+                updateProgress(100);
+
+                addResult(
+                    'Island Consistency',
+                    consistent,
+                    `Same island generated identically: ${consistent ? 'Yes' : 'No'}\nTest performed on ${island.heightmap.length.toLocaleString()} data points`,
+                    { consistent }
+                );
+
+            } catch (error) {
+                updateProgress(100);
+                addResult(
+                    'Test Island Generation - ERROR',
+                    false,
+                    `Error: ${error.message}\n${error.stack}`,
+                    { error: error.toString() }
+                );
+            }
+        }
+
+        // Main test suite
+        window.runFullSuite = async () => {
+            updateProgress(0);
+            await runCrossBrowserTests();
+            updateProgress(30);
+            await generateTestIsland();
+            updateProgress(60);
+            await runPerformanceTests();
+            updateProgress(100);
+        };
+
+        window.runPerformanceTests = runPerformanceTests;
+        window.runCrossBrowserTests = runCrossBrowserTests;
+        window.generateTestIsland = generateTestIsland;
+
+        // Initialize when page loads
+        detectBrowser();
+    </script>
+</body>
+</html>

@@ -1,0 +1,76 @@
+{
+  "name": "404islands",
+  "version": "1.0.0",
+  "description": "A generative art project featuring 404 unique, living islands.",
+  "main": "src/backend/server.js",
+  "scripts": {
+    "start": "node src/backend/server.js",
+    "dev": "concurrently \"npm run dev-backend\" \"npm run dev-frontend\"",
+    "dev-backend": "nodemon src/backend/server.js",
+    "dev-frontend": "cd client && npm start",
+    "build": "cd client && npm run build",
+    "deploy": "npm run build && scp -r client/build opc@132.226.223.180:/var/www/archipelago",
+    "test": "npx jest",
+    "lint": "eslint src/**/*.{js,jsx,ts,tsx} client/src/**/*.{js,jsx,ts,tsx}",
+    "docker:build": "docker-compose build",
+    "docker:up": "docker-compose up",
+    "docker:down": "docker-compose down"
+  },
+  "keywords": [
+    "islands",
+    "perlin-noise",
+    "ocean",
+    "generation",
+    "archipelago",
+    "art",
+    "webgl",
+    "terrain"
+  ],
+  "author": "404islands",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "helmet": "^7.0.0",
+    "morgan": "^1.10.0",
+    "express-validation": "^4.0.0",
+    "mongoose": "^7.5.0",
+        "oracledb": "^6.0.3",
+        "dotenv": "^16.3.1",
+    "jsonwebtoken": "^9.0.2",
+    "bcryptjs": "^2.4.3",
+    "express-brute": "^1.0.1",
+    "compression": "^1.7.4",
+    "express-rate-limit": "^7.1.5",
+    "web3": "^1.10.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1",
+    "jest": "^29.6.4",
+    "supertest": "^6.3.3",
+    "eslint": "^8.49.0",
+    "concurrently": "^8.2.1",
+    "typescript": "^5.2.2",
+    "@types/node": "^20.5.9",
+    "@types/express": "^4.17.17",
+    "@types/cors": "^2.8.13",
+    "@types/jest": "^29.5.4"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/404islands/404islands.git"
+  },
+  "homepage": "https://islands.uselsess.com",
+  "bugs": {
+    "url": "https://github.com/404islands/404islands/issues"
+  },
+  "jest": {
+    "testMatch": [
+      "<rootDir>/tests/**/*.test.js"
+    ]
+  }
+}

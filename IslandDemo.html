@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Islands Canvas Renderer Demo - 60fps Parametric Rendering</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: #f0f8ff;
+            color: #333;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .demo-section {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+
+        .canvas-container {
+            position: relative;
+            margin: 0 auto;
+            max-width: 800px;
+            border: 2px solid #ccc;
+            border-radius: 8px;
+            overflow: hidden;
+            background: skyblue;
+            box-shadow: 0 0 20px rgba(0,0,0,0.2);
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: auto;
+            background: linear-gradient(180deg, #87CEEB, #1e90ff);
+            cursor: grab;
+        }
+
+        canvas:active {
+            cursor: grabbing;
+        }
+
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .island-selector {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .island-btn {
+            padding: 8px 16px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: bold;
+        }
+
+        .island-btn:hover {
+            background: #45a049;
+            transform: translateY(-2px);
+        }
+
+        .island-btn.active {
+            background: #2196F3;
+        }
+
+        .zoom-controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        .zoom-btn {
+            padding: 8px 16px;
+            background: #FF9800;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 1.2em;
+        }
+
+        .zoom-btn:hover {
+            background: #F57C00;
+            transform: translateY(-2px);
+        }
+
+        .performance-monitor {
+            background: #f5f5f5;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .metric {
+            background: white;
+            padding: 10px;
+            border-radius: 4px;
+            text-align: center;
+        }
+
+        .metric-label {
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #666;
+        }
+
+        .metric-value {
+            font-size: 1.3em;
+            color: #2196F3;
+        }
+
+        .good .metric-value {
+            color: #4CAF50;
+        }
+
+        .warning .metric-value {
+            color: #FF9800;
+        }
+
+        .critical .metric-value {
+            color: #F44336;
+        }
+
+        .info-section {
+            background: #e8f5e8;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #4CAF50;
+        }
+
+        .info-section h3 {
+            color: #2E7D32;
+            margin-bottom: 10px;
+        }
+
+        .instructions {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 4px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .instructions ul {
+            margin-left: 20px;
+        }
+
+        .instructions li {
+            margin-bottom: 5px;
+        }
+
+        @media (max-width: 768px) {
+            .controls {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .island-selector {
+                justify-content: center;
+            }
+
+            .header h1 {
+                font-size: 2em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>🏝️ Island Canvas Renderer Demo</h1>
+            <p>60fps HTML5 Canvas Island Rendering with Perlin Noise Effects</p>
+        </header>
+
+        <div class="info-section">
+            <h3>🎯 Performance Targets</h3>
+            <ul>
+                <li><strong>60 FPS sustained rendering</strong> with GPU-accelerated terrain shader</li>
+                <li><strong><32MB memory usage</strong> with efficient terrain caching</li>
+                <li><strong>Smooth zoom/pan</strong> with momentum physics</li>
+                <li><strong>Cross-browser support</strong> including mobile touch controls</li>
+            </ul>
+        </div>
+
+        <div class="demo-section">
+            <h2 style="text-align: center; margin-bottom: 20px;">Island Gallery (1-10)</h2>
+            <div class="canvas-container">
+                <canvas id="island-canvas" width="800" height="600"></canvas>
+            </div>
+
+            <div class="controls">
+                <div class="island-selector">
+                    <div class="island-btn active" data-island="0">Island 1</div>
+                    <div class="island-btn" data-island="1">Island 2</div>
+                    <div class="island-btn" data-island="2">Island 3</div>
+                    <div class="island-btn" data-island="3">Island 4</div>
+                    <div class="island-btn" data-island="4">Island 5</div>
+                    <div class="island-btn" data-island="5">Island 6</div>
+                    <div class="island-btn" data-island="6">Island 7</div>
+                    <div class="island-btn" data-island="7">Island 8</div>
+                    <div class="island-btn" data-island="8">Island 9</div>
+                    <div class="island-btn" data-island="9">Island 10</div>
+                </div>
+
+                <div class="zoom-controls">
+                    <button class="zoom-btn" id="zoom-in">+</button>
+                    <button class="zoom-btn" id="zoom-out">-</button>
+                    <button class="zoom-btn" id="reset-view">↻</button>
+                </div>
+            </div>
+
+            <div class="performance-monitor">
+                <h3 style="margin-bottom: 15px;">📊 Real-Time Performance Monitor</h3>
+                <div class="metrics-grid" id="performance-metrics">
+                    <!-- Metrics will be populated by JavaScript -->
+                </div>
+            </div>
+        </div>
+
+        <div class="instructions">
+            <h3>🖱️ Controls</h3>
+            <ul>
+                <li><strong>Click and drag</strong>: Pan around the island</li>
+                <li><strong>Mouse wheel</strong>: Zoom in/out</li>
+                <li><strong>Pinch to zoom</strong>: On touch devices</li>
+                <li><strong>Island buttons</strong>: Switch between islands 1-10</li>
+                <li><strong>Keyboard</strong>: WASD to move, +/- to zoom, 0 to reset</li>
+            </ul>
+        </div>
+
+        <footer style="text-align: center; margin-top: 30px; color: #666;">
+            <p>Developed with ❤️ for optimal canvas-based terrain rendering</p>
+        </footer>
+    </div>
+
+    <script type="module">
+        // Import all modules
+        import { IslandCanvasRenderer } from './IslandCanvasRenderer.js';
+        import { TerrainShader } from './TerrainShader.js';
+        import { PerformanceMonitor } from './PerformanceMonitor.js';
+        import { ZoomPanController } from './ZoomPanController.js';
+        import { islandGenerator } from './IslandGenerator.js';
+
+        // Initialize components
+        let renderer = null;
+        let zoomController = null;
+        let performanceMonitor = null;
+
+        async function initDemo() {
+            try {
+                const canvas = document.getElementById('island-canvas');
+
+                // Create renderer
+                renderer = new IslandCanvasRenderer({
+                    canvas: canvas,
+                    islandGenerator: islandGenerator,
+                    performanceBudget: 16, // 60fps target
+                    pixelRatio: window.devicePixelRatio
+                });
+
+                // Create zoom/pan controller
+                zoomController = new ZoomPanController(renderer, canvas, {
+                    enableMomentum: true,
+                    smoothZoom: true,
+                    smoothPan: true,
+                    keyboardControls: true,
+                    touchControls: true
+                });
+
+                // Create performance monitor
+                performanceMonitor = new PerformanceMonitor({
+                    targetFPS: 60,
+                    budgetMS: 16,
+                    memoryBudgetMB: 32,
+                    onPerformanceWarning: showPerformanceWarning,
+                    onPerformanceCritical: showPerformanceCritical
+                });
+
+                // Setup island buttons
+                setupIslandButtons();
+
+                // Setup zoom buttons
+                setupZoomButtons();
+
+                // Set canvas size
+                handleResize();
+                window.addEventListener('resize', handleResize);
+
+                // Start with first island
+                await loadIsland(0);
+
+                // Start performance monitoring
+                startPerformanceMonitoring();
+
+                console.log('🚀 Islands Canvas Renderer Demo initialized successfully!');
+
+            } catch (error) {
+                console.error('❌ Failed to initialize demo:', error);
+                alert('Failed to initialize demo. Check console for details.');
+            }
+        }
+
+        function setupIslandButtons() {
+            const buttons = document.querySelectorAll('.island-btn[data-island]');
+            buttons.forEach(button => {
+                button.addEventListener('click', async () => {
+                    const islandId = parseInt(button.dataset.island);
+
+                    // Update active button
+                    document.querySelectorAll('.island-btn').forEach(btn => btn.classList.remove('active'));
+                    button.classList.add('active');
+
+                    // Load island
+                    await loadIsland(islandId);
+                });
+            });
+        }
+
+        function setupZoomButtons() {
+            document.getElementById('zoom-in').addEventListener('click', () => {
+                if (zoomController) {
+                    zoomController.setZoomLevel(renderer.zoom * 1.2, true);
+                }
+            });
+
+            document.getElementById('zoom-out').addEventListener('click', () => {
+                if (zoomController) {
+                    zoomController.setZoomLevel(renderer.zoom / 1.2, true);
+                }
+            });
+
+            document.getElementById('reset-view').addEventListener('click', () => {
+                if (zoomController) {
+                    zoomController.resetView();
+                }
+            });
+        }
+
+        async function loadIsland(islandId) {
+            if (!renderer) return;
+
+            try {
+                performanceMonitor.benchmark(`Render Island ${islandId}`, () => {
+                    renderer.renderIsland(islandId);
+                });
+            } catch (error) {
+                console.error(`Failed to render island ${islandId}:`, error);
+                alert(`Failed to render island ${islandId}`);
+            }
+        }
+
+        function handleResize() {
+            if (!renderer) return;
+
+            const container = document.querySelector('.canvas-container');
+            const rect = container.getBoundingClientRect();
+
+            renderer.setCanvasSize(rect.width, rect.height);
+        }
+
+        function startPerformanceMonitoring() {
+            const metricsContainer = document.getElementById('performance-metrics');
+            let lastUpdate = 0;
+
+            function updateMetrics() {
+                const now = performance.now();
+                if (now - lastUpdate < 100) { // Update every 100ms
+                    requestAnimationFrame(updateMetrics);
+                    return;
+                }
+                lastUpdate = now;
+
+                const metrics = performanceMonitor.getMetrics();
+                const status = performanceMonitor.getPerformanceStatus();
+
+                metricsContainer.innerHTML = `
+                    <div class="metric">
+                        <div class="metric-label">FPS</div>
+                        <div class="metric-value ${status === 'critical' ? 'critical' : status === 'warning' ? 'warning' : 'good'}">${metrics.currentFPS.toFixed(1)}</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">Render Time</div>
+                        <div class="metric-value ${metrics.averageRenderTime > 16 ? 'critical' : metrics.averageRenderTime > 13 ? 'warning' : 'good'}">${metrics.averageRenderTime.toFixed(2)}ms</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">Longest Frame</div>
+                        <div class="metric-value ${metrics.longestFrame > 33 ? 'critical' : metrics.longestFrame > 16 ? 'warning' : 'good'}">${metrics.longestFrame.toFixed(2)}ms</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">Memory Usage</div>
+                        <div class="metric-value ${metrics.currentMemoryMB > 32 ? 'critical' : metrics.currentMemoryMB > 25 ? 'warning' : 'good'}">${metrics.currentMemoryMB.toFixed(1)}MB</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">Frame Drops</div>
+                        <div class="metric-value ${metrics.frameDrops > 5 ? 'critical' : metrics.frameDrops > 2 ? 'warning' : 'good'}">${metrics.frameDrops}</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">Zoom Level</div>
+                        <div class="metric-value">${renderer ? renderer.zoom.toFixed(2) + 'x' : 'N/A'}</div>
+                    </div>
+                `;
+
+                requestAnimationFrame(updateMetrics);
+            }
+
+            updateMetrics();
+        }
+
+        function showPerformanceWarning(event) {
+            console.warn('⚠️ Performance warning:', event.message);
+
+            // Could show in-app notification here in production
+            const tempDiv = document.createElement('div');
+            tempDiv.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: #FF9800;
+                color: white;
+                padding: 15px;
+                border-radius: 4px;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+                z-index: 10000;
+                font-weight: bold;
+                transition: opacity 0.5s;
+            `;
+            tempDiv.innerHTML = '⚠️ ' + event.message;
+
+            document.body.appendChild(tempDiv);
+
+            setTimeout(() => {
+                tempDiv.style.opacity = '0';
+                setTimeout(() => {
+                    if (tempDiv.parentNode) {
+                        tempDiv.parentNode.removeChild(tempDiv);
+                    }
+                }, 500);
+            }, 3000);
+        }
+
+        function showPerformanceCritical(event) {
+            console.error('🔴 Performance critical:', event.message);
+
+            const tempDiv = document.createElement('div');
+            tempDiv.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: #F44336;
+                color: white;
+                padding: 15px;
+                border-radius: 4px;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+                z-index: 10000;
+                font-weight: bold;
+                transition: opacity 0.5s;
+            `;
+            tempDiv.innerHTML = '🔴 ' + event.message;
+
+            document.body.appendChild(tempDiv);
+
+            setTimeout(() => {
+                tempDiv.style.opacity = '0';
+                setTimeout(() => {
+                    if (tempDiv.parentNode) {
+                        tempDiv.parentNode.removeChild(tempDiv);
+                    }
+                }, 500);
+            }, 5000);
+        }
+
+        // Initialize when page loads
+        window.addEventListener('DOMContentLoaded', initDemo);
+
+        // Handle cleanup
+        window.addEventListener('beforeunload', () => {
+            if (performanceMonitor) {
+                performanceMonitor.stop();
+            }
+            if (zoomController) {
+                zoomController.destroy();
+            }
+        });
+    </script>
+</body>
+</html>

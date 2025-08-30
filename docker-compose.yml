@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:13
+    restart: always
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: 404islands
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    restart: always
+    environment:
+      DB_USER: user
+      DB_PASSWORD: password
+      DB_NAME: 404islands
+      DB_HOST: db
+      DB_PORT: 5432
+      NODE_ENV: development
+    ports:
+      - "3000:3000"
+    depends_on:
+      - db
+    volumes:
+      - ./404islands/404islands-app/src/backend:/app/src/backend
+      - ./404islands-app/package.json:/app/package.json
+      - ./404islands-app/package-lock.json:/app/package-lock.json
+      - /app/node_modules # Exclude node_modules from host mount
+
+volumes:
+  db_data:
