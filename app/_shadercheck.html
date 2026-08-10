@@ -1,0 +1,57 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>contact sheet</title>
+<style>
+html,body{margin:0;background:#05070a;color:#ccc;font:12px ui-monospace,monospace}
+#sheet{display:grid;grid-template-columns:repeat(4,1fr);gap:2px}
+figure{margin:0;position:relative}
+canvas{display:block;width:100%;aspect-ratio:3/2}
+figcaption{position:absolute;left:6px;bottom:4px;text-shadow:0 1px 3px #000;font-size:11px}
+</style>
+</head><body>
+<div id="sheet"></div>
+<script type="module">
+import { ThumbnailFactory } from './src/gl/thumbnails.js';
+import { getIsland } from './src/core/catalog.js';
+import { simulateClimate } from './src/climate/simulate.js';
+import { deriveScene } from './src/climate/derive.js';
+import { auroraStrength } from './src/gl/uniforms.js';
+
+const params = new URLSearchParams(location.search);
+const list = (params.get('n') || '42,217,1,7,100,150,200,250,300,350,380,404').split(',').map(Number);
+const hourOffset = Number(params.get('hour') || 0);
+const result = { ok: false, errors: [], rendered: 0, islands: [] };
+window.__result = result;
+
+try {
+  const factory = new ThumbnailFactory({ width: 480, height: 320, samples: 2, budgetMs: 10000 });
+  if (!factory.supported) throw new Error('no webgl2');
+  const sheet = document.getElementById('sheet');
+  const when = new Date(Date.now() + hourOffset * 3600000);
+  let pending = list.length;
+
+  for (const n of list) {
+    const island = getIsland(n);
+    const canvas = document.createElement('canvas');
+    canvas.width = 480; canvas.height = 320;
+    const fig = document.createElement('figure');
+    const cap = document.createElement('figcaption');
+    const climate = simulateClimate(island, when);
+    const scene = deriveScene(island, climate, when);
+    scene.aurora = auroraStrength(island, scene);
+    cap.textContent = `${island.id} ${island.name} · ${island.archetype.id} · ${climate.temperature}C ${climate.cloudCover}% cl`;
+    fig.append(canvas, cap);
+    sheet.appendChild(fig);
+    result.islands.push({ n, name: island.name, arch: island.archetype.id, lat: island.lat, temp: climate.temperature, cloud: climate.cloudCover, precip: climate.precipitation });
+    factory.request(island, scene, canvas, (ok, err) => {
+      if (ok) result.rendered++;
+      else if (err) result.errors.push(String(err.message || err));
+      if (--pending === 0) result.ok = result.errors.length === 0;
+    });
+  }
+  window.__factory = factory;
+} catch (e) {
+  result.errors.push(String(e && e.message || e));
+  result.log = e && e.log;
+}
+</script>
+</body></html>

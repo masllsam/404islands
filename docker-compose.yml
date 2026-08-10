@@ -1,39 +1,18 @@
-version: '3.8'
-
 services:
-  db:
-    image: postgres:13
-    restart: always
-    environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: 404islands
+  atlas:
+    build: .
+    image: 404islands:latest
+    restart: unless-stopped
     ports:
-      - "5432:5432"
-    volumes:
-      - db_data:/var/lib/postgresql/data
-
-  backend:
-    build:
-      context: .
-      dockerfile: Dockerfile.backend
-    restart: always
+      - '8080:8080'
     environment:
-      DB_USER: user
-      DB_PASSWORD: password
-      DB_NAME: 404islands
-      DB_HOST: db
-      DB_PORT: 5432
-      NODE_ENV: development
-    ports:
-      - "3000:3000"
-    depends_on:
-      - db
+      # How long a climate response is reused before it is refetched. Ten
+      # minutes is well inside Open-Meteo's own update cadence and keeps this
+      # deployment a polite consumer of a free service.
+      CLIMATE_TTL_MS: '600000'
+      UPSTREAM_TIMEOUT_MS: '12000'
     volumes:
-      - ./404islands/404islands-app/src/backend:/app/src/backend
-      - ./404islands-app/package.json:/app/package.json
-      - ./404islands-app/package-lock.json:/app/package-lock.json
-      - /app/node_modules # Exclude node_modules from host mount
+      - reservations:/data
 
 volumes:
-  db_data:
+  reservations:

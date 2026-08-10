@@ -1,0 +1,28 @@
+{
+  "name": "404islands",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "description": "404 procedurally generated islands, each anchored to a real coordinate in the world ocean and rendered under its real, live weather.",
+  "keywords": [
+    "generative-art",
+    "webgl",
+    "raymarching",
+    "climate-data",
+    "open-meteo",
+    "procedural-generation"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js",
+    "test": "node --test \"tests/*.test.js\"",
+    "check": "node scripts/check.js"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}

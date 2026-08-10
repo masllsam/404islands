@@ -1,0 +1,650 @@
+/* ==========================================================================
+   404 Islands — views
+   ========================================================================== */
+
+#view {
+  min-height: 100vh;
+}
+
+/* ── The stage: wherever the live renderer currently lives ─────────────── */
+
+.stage {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  background: radial-gradient(120% 90% at 50% 40%, #0d1420 0%, #05070a 70%);
+}
+.stage canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: pan-y;
+  cursor: grab;
+}
+.stage canvas:active { cursor: grabbing; }
+
+.stage__scrim {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(to top, rgba(5, 7, 10, 0.88) 0%, rgba(5, 7, 10, 0) 42%),
+    linear-gradient(to bottom, rgba(5, 7, 10, 0.7) 0%, rgba(5, 7, 10, 0) 28%);
+}
+
+.stage__hint {
+  position: absolute;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-family: var(--mono);
+  font-size: 0.64rem;
+  letter-spacing: 0.08em;
+  color: var(--fg-faint);
+  pointer-events: none;
+  transition: opacity var(--med) var(--ease);
+}
+
+/* The exposure meter: how far a still has converged. */
+.exposure {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.exposure__track {
+  width: 60px;
+  height: 2px;
+  background: var(--hair);
+  overflow: hidden;
+}
+.exposure__fill {
+  height: 100%;
+  width: 0%;
+  background: var(--brass);
+  transition: width 220ms linear;
+}
+.exposure--done .exposure__fill { background: var(--live); }
+
+/* ── Overture ──────────────────────────────────────────────────────────── */
+
+.overture__stage {
+  height: 100vh;
+  height: 100svh;
+  min-height: 560px;
+}
+
+.overture__title {
+  position: absolute;
+  z-index: 4;
+  left: var(--gutter);
+  bottom: clamp(3rem, 12vh, 8rem);
+  max-width: min(46ch, 90vw);
+}
+.overture__title h1 {
+  font-size: clamp(3rem, 11vw, 8.5rem);
+  line-height: 0.88;
+  letter-spacing: -0.035em;
+  text-shadow: 0 2px 40px rgba(0, 0, 0, 0.6);
+}
+.overture__title h1 span {
+  display: block;
+  font-size: 0.34em;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  font-family: var(--sans);
+  color: var(--brass);
+  margin-bottom: 0.9rem;
+  text-shadow: none;
+}
+.overture__lede {
+  margin-top: 1.6rem;
+  font-family: var(--serif);
+  font-size: clamp(1.05rem, 1.6vw, 1.3rem);
+  line-height: 1.6;
+  color: var(--fg-dim);
+  max-width: 44ch;
+  text-shadow: 0 1px 20px rgba(0, 0, 0, 0.8);
+}
+.overture__actions {
+  margin-top: 2rem;
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+/* The card naming the island currently on screen. */
+.nowshowing {
+  position: absolute;
+  z-index: 4;
+  right: var(--gutter);
+  top: clamp(5rem, 12vh, 8rem);
+  width: min(280px, 60vw);
+  padding: 1rem 1.1rem;
+  background: rgba(8, 11, 16, 0.55);
+  border: 1px solid var(--hair);
+  border-radius: var(--radius);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  text-align: right;
+}
+.nowshowing__name {
+  font-family: var(--serif);
+  font-size: 1.25rem;
+  line-height: 1.2;
+  margin: 0.35rem 0 0.15rem;
+}
+.nowshowing__meta {
+  font-family: var(--mono);
+  font-size: 0.66rem;
+  color: var(--fg-faint);
+  line-height: 1.7;
+}
+.nowshowing__reading {
+  margin-top: 0.7rem;
+  padding-top: 0.7rem;
+  border-top: 1px solid var(--hair);
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  color: var(--fg-dim);
+}
+
+@media (max-width: 760px) {
+  .nowshowing { display: none; }
+  .overture__title { right: var(--gutter); }
+}
+
+/* Prose sections below the fold. */
+.section {
+  padding: clamp(4rem, 12vh, 9rem) var(--gutter);
+  max-width: 1400px;
+  margin: 0 auto;
+}
+.section--split {
+  display: grid;
+  gap: clamp(2rem, 6vw, 5rem);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+  align-items: start;
+}
+@media (max-width: 900px) {
+  .section--split { grid-template-columns: 1fr; }
+}
+
+.section__label { margin-bottom: 1.5rem; }
+.section h2 { margin-bottom: 1.5rem; }
+
+.facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 1px;
+  background: var(--hair);
+  border: 1px solid var(--hair);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.fact {
+  background: var(--ink);
+  padding: 1.4rem 1.2rem;
+}
+.fact__value {
+  font-family: var(--serif);
+  font-size: clamp(1.6rem, 3vw, 2.4rem);
+  line-height: 1;
+  display: block;
+  margin-bottom: 0.5rem;
+}
+.fact__label {
+  font-size: 0.66rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--fg-faint);
+}
+
+/* ── Atlas ─────────────────────────────────────────────────────────────── */
+
+.atlas { padding-top: 4.6rem; }
+
+.atlas__head {
+  padding: clamp(2rem, 6vh, 4rem) var(--gutter) 1.5rem;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 2rem;
+  flex-wrap: wrap;
+}
+.atlas__head h1 { font-size: clamp(2rem, 4.5vw, 3.4rem); }
+
+.filters {
+  position: sticky;
+  top: 3.4rem;
+  z-index: 40;
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 0.75rem var(--gutter);
+  background: rgba(5, 7, 10, 0.92);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-block: 1px solid var(--hair);
+}
+.filters input[type='search'] { max-width: 240px; }
+.filters select { width: auto; min-width: 130px; }
+.filters__count {
+  margin-left: auto;
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--fg-faint);
+  white-space: nowrap;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(clamp(200px, 22vw, 300px), 1fr));
+  gap: 1px;
+  background: var(--hair);
+  border-block: 1px solid var(--hair);
+}
+
+.tile {
+  position: relative;
+  display: block;
+  background: var(--ink);
+  text-decoration: none;
+  color: inherit;
+  aspect-ratio: 3 / 2;
+  overflow: hidden;
+  isolation: isolate;
+}
+.tile canvas,
+.tile__placeholder {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.tile__placeholder {
+  background:
+    radial-gradient(80% 60% at 50% 78%, rgba(20, 34, 52, 0.9), rgba(6, 9, 14, 1));
+}
+.tile__placeholder::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.04) 50%, transparent 70%);
+  transform: translateX(-100%);
+  animation: shimmer 2.2s var(--ease) infinite;
+}
+@keyframes shimmer { to { transform: translateX(100%); } }
+
+.tile__body {
+  position: absolute;
+  inset: auto 0 0 0;
+  padding: 0.9rem 1rem;
+  background: linear-gradient(to top, rgba(4, 6, 9, 0.92), rgba(4, 6, 9, 0));
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.75rem;
+  transform: translateY(0);
+  transition: background var(--med) var(--ease);
+}
+.tile__number {
+  font-family: var(--mono);
+  font-size: 0.66rem;
+  color: var(--brass);
+  letter-spacing: 0.1em;
+}
+.tile__name {
+  font-family: var(--serif);
+  font-size: 1.02rem;
+  line-height: 1.2;
+  margin-top: 0.15rem;
+}
+.tile__region {
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  color: var(--fg-faint);
+  margin-top: 0.2rem;
+}
+.tile__reading {
+  font-family: var(--mono);
+  font-size: 0.66rem;
+  color: var(--fg-dim);
+  text-align: right;
+  white-space: nowrap;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity var(--med) var(--ease), transform var(--med) var(--ease);
+}
+.tile:hover .tile__reading,
+.tile:focus-visible .tile__reading { opacity: 1; transform: none; }
+
+.tile::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 1px solid transparent;
+  transition: border-color var(--fast) var(--ease);
+  pointer-events: none;
+}
+.tile:hover::after,
+.tile:focus-visible::after { border-color: var(--brass-dim); }
+
+.atlas__empty {
+  padding: 6rem var(--gutter);
+  text-align: center;
+  color: var(--fg-faint);
+}
+
+/* ── Island view ───────────────────────────────────────────────────────── */
+
+.island {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 430px);
+  align-items: start;
+  min-height: 100vh;
+}
+@media (max-width: 1000px) {
+  .island { grid-template-columns: 1fr; }
+}
+
+.island__stage {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  height: 100svh;
+}
+@media (max-width: 1000px) {
+  .island__stage { position: relative; height: 62vh; min-height: 380px; }
+}
+
+.island__panel {
+  padding: 5.5rem var(--gutter) 4rem;
+  border-left: 1px solid var(--hair);
+  min-height: 100vh;
+  background: var(--ink);
+}
+@media (max-width: 1000px) {
+  .island__panel { border-left: 0; border-top: 1px solid var(--hair); padding-top: 2.5rem; min-height: 0; }
+}
+
+.island__number {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.24em;
+  color: var(--brass);
+}
+.island__name {
+  font-size: clamp(2.1rem, 3.4vw, 3rem);
+  margin: 0.5rem 0 0.3rem;
+}
+.island__epithet {
+  font-family: var(--serif);
+  font-style: italic;
+  color: var(--fg-dim);
+  font-size: 1.05rem;
+}
+.island__coords {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  color: var(--fg-faint);
+  margin-top: 0.6rem;
+}
+
+.island__blurb {
+  font-family: var(--serif);
+  font-size: 1.05rem;
+  line-height: 1.65;
+  color: var(--fg-dim);
+  margin: 1.6rem 0;
+}
+
+/* Instrument grid: the live half of the piece, stated plainly. */
+.instruments {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
+  gap: 1px;
+  background: var(--hair);
+  border: 1px solid var(--hair);
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin: 1.5rem 0;
+}
+.instrument {
+  background: var(--ink-raised);
+  padding: 0.85rem 0.9rem;
+  min-width: 0;
+}
+.instrument__label {
+  font-size: 0.6rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--fg-faint);
+  display: block;
+  margin-bottom: 0.35rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.instrument__value {
+  font-family: var(--mono);
+  font-size: 1.02rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--fg);
+  display: block;
+  line-height: 1.2;
+}
+.instrument__note {
+  font-size: 0.66rem;
+  color: var(--fg-faint);
+  margin-top: 0.25rem;
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.instrument--wide { grid-column: span 2; }
+
+/* A compass rose that points where the wind is actually coming from. */
+.compass {
+  width: 54px;
+  height: 54px;
+  flex: none;
+}
+.compass__needle {
+  transform-origin: 27px 27px;
+  transition: transform var(--slow) var(--ease);
+}
+
+.traits {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 1.2rem 0;
+  padding: 0;
+  list-style: none;
+}
+.traits li {
+  font-family: var(--mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.04em;
+  color: var(--fg-dim);
+  border: 1px solid var(--hair);
+  border-radius: 999px;
+  padding: 0.25rem 0.7rem;
+}
+
+.island__actions {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin: 2rem 0;
+}
+
+.dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.5rem 1.5rem;
+  margin: 1.5rem 0;
+  font-size: 0.85rem;
+}
+.dl dt {
+  font-size: 0.66rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--fg-faint);
+  padding-top: 0.15rem;
+}
+.dl dd { margin: 0; color: var(--fg-dim); }
+
+.neighbours {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 0.6rem;
+  margin-top: 1rem;
+}
+.neighbour {
+  display: block;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--hair);
+  border-radius: var(--radius);
+  text-decoration: none;
+  color: var(--fg-dim);
+  font-size: 0.78rem;
+  transition: border-color var(--fast) var(--ease), color var(--fast) var(--ease);
+}
+.neighbour:hover { border-color: var(--brass-dim); color: var(--fg); }
+.neighbour b { display: block; font-family: var(--serif); font-weight: 400; color: var(--fg); font-size: 0.95rem; }
+
+/* ── Acquire ───────────────────────────────────────────────────────────── */
+
+.tiers {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1px;
+  background: var(--hair);
+  border: 1px solid var(--hair);
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin: 2.5rem 0;
+}
+.tier {
+  background: var(--ink-raised);
+  padding: 2rem 1.6rem;
+  display: flex;
+  flex-direction: column;
+}
+.tier--feature { background: var(--ink-panel); }
+.tier__name {
+  font-family: var(--serif);
+  font-size: 1.5rem;
+  margin-bottom: 0.3rem;
+}
+.tier__price {
+  font-family: var(--mono);
+  font-size: 1.9rem;
+  color: var(--brass);
+  margin: 0.6rem 0 0.2rem;
+}
+.tier__cadence { font-size: 0.7rem; color: var(--fg-faint); letter-spacing: 0.1em; text-transform: uppercase; }
+.tier ul {
+  list-style: none;
+  padding: 0;
+  margin: 1.6rem 0;
+  display: grid;
+  gap: 0.7rem;
+  font-size: 0.86rem;
+  color: var(--fg-dim);
+  flex: 1;
+}
+.tier li { display: grid; grid-template-columns: 1rem 1fr; gap: 0.6rem; }
+.tier li::before { content: '—'; color: var(--brass-dim); }
+
+.notice {
+  border: 1px solid var(--hair);
+  border-left: 2px solid var(--brass);
+  border-radius: var(--radius);
+  padding: 1.2rem 1.4rem;
+  background: var(--ink-raised);
+  color: var(--fg-dim);
+  font-size: 0.88rem;
+  margin: 2rem 0;
+}
+.notice strong { color: var(--fg); font-weight: 600; }
+.notice--good { border-left-color: var(--live); }
+.notice--bad { border-left-color: var(--alert); }
+
+.form {
+  display: grid;
+  gap: 1rem;
+  max-width: 520px;
+  margin-top: 2rem;
+}
+.form__row { display: grid; gap: 0.4rem; }
+.form__row label {
+  font-size: 0.66rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--fg-faint);
+}
+.form__error { color: var(--alert); font-size: 0.8rem; min-height: 1.2em; }
+
+/* ── Not found ─────────────────────────────────────────────────────────── */
+
+.notfound {
+  min-height: 100vh;
+  display: grid;
+  place-content: center;
+  text-align: center;
+  gap: 1.5rem;
+  padding: var(--gutter);
+}
+.notfound h1 { font-size: clamp(5rem, 22vw, 15rem); line-height: 0.8; color: var(--brass); }
+
+/* ── Toasts ────────────────────────────────────────────────────────────── */
+
+.toasts {
+  position: fixed;
+  left: 50%;
+  bottom: 1.5rem;
+  transform: translateX(-50%);
+  z-index: 120;
+  display: grid;
+  gap: 0.5rem;
+  pointer-events: none;
+  width: min(440px, calc(100vw - 2rem));
+}
+.toast {
+  background: rgba(14, 18, 25, 0.96);
+  border: 1px solid var(--hair-strong);
+  border-radius: var(--radius);
+  padding: 0.8rem 1.1rem;
+  font-size: 0.84rem;
+  color: var(--fg-dim);
+  backdrop-filter: blur(10px);
+  animation: toastIn var(--med) var(--ease) both;
+}
+.toast--bad { border-color: rgba(224, 138, 111, 0.5); }
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* ── No WebGL ──────────────────────────────────────────────────────────── */
+
+.fallback {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  text-align: center;
+  padding: 2rem;
+  gap: 0.8rem;
+  color: var(--fg-faint);
+  background:
+    radial-gradient(90% 70% at 50% 85%, rgba(24, 44, 66, 0.55), rgba(5, 7, 10, 1));
+}

@@ -1,0 +1,63 @@
+name: CI
+
+on:
+  push:
+    branches: [main, 'claude/**']
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Tests (Node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['20', '22']
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+
+      # The application has no dependencies at all — there is nothing to
+      # install, and `npm ci` would fail for want of a lockfile.
+      - name: Run tests
+        run: npm test
+
+      - name: Server starts and answers
+        run: |
+          node server/index.js &
+          server_pid=$!
+          for _ in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8080/healthz > /dev/null; then break; fi
+            sleep 0.5
+          done
+          curl -fsS http://127.0.0.1:8080/healthz | tee /dev/stderr | grep -q '"islands":404'
+          curl -fsS http://127.0.0.1:8080/ > /dev/null
+          curl -fsS http://127.0.0.1:8080/api/islands/404 > /dev/null
+          kill "$server_pid"
+
+  browser:
+    name: Browser smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Playwright
+        run: |
+          npm install --no-save playwright@1
+          npx playwright install --with-deps chromium
+
+      # No GPU on a runner, so Chromium falls back to SwiftShader. Rendering is
+      # slow but the shaders are compiled and executed for real, which is the
+      # point of this job.
+      - name: Smoke test
+        run: node scripts/smoke.mjs
+        timeout-minutes: 15
