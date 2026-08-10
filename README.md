@@ -14,7 +14,7 @@ Stand still and the render keeps refining until it is clean enough to print.
 
 ```
 npm start          # http://localhost:8080
-npm test           # 69 tests, no dependencies
+npm test           # 81 tests, no dependencies
 node scripts/smoke.mjs   # browser checks (needs a global Playwright)
 ```
 

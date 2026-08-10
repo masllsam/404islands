@@ -14,12 +14,28 @@ const SVG_TAGS = new Set([
 
 /**
  * h('div.card', { onclick }, 'text', child)
+ * h('div.card', 'text')            — props are optional
  *
  * The tag accepts CSS-ish shorthand: `tag.class.class#id`. Props map to
  * properties where one exists and attributes otherwise, `style` accepts an
  * object, `dataset` accepts an object, and `on*` keys become listeners.
  */
 export function h(tag, props, ...children) {
+  // The second argument is only props if it is a plain object. A string, a
+  // node or an array is a child — and getting this wrong is spectacular
+  // rather than subtle, because Object.entries('text') yields ['0', 't'] and
+  // '0' is not a legal attribute name.
+  if (
+    props === null ||
+    props === undefined ||
+    typeof props !== 'object' ||
+    Array.isArray(props) ||
+    props instanceof Node
+  ) {
+    if (props !== null && props !== undefined && props !== false) children.unshift(props);
+    props = null;
+  }
+
   const [name, ...rest] = String(tag).split(/(?=[.#])/);
   const el = SVG_TAGS.has(name)
     ? document.createElementNS(SVG_NS, name)
