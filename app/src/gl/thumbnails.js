@@ -101,6 +101,19 @@ export class ThumbnailFactory {
     entry.onDone?.(false);
   }
 
+  /**
+   * Abandon everything queued. The atlas calls this when it is torn down:
+   * without it, navigating away leaves the GPU grinding through tiles for a
+   * view that no longer exists, which costs battery and stalls whatever the
+   * visitor asked for instead.
+   */
+  clear() {
+    for (const [number, entry] of this.queue) {
+      this.queue.delete(number);
+      entry.onDone?.(false);
+    }
+  }
+
   #schedule() {
     if (this.scheduled || !this.queue.size) return;
     this.scheduled = true;

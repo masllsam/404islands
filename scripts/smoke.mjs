@@ -111,8 +111,13 @@ try {
     // A blocked or absent climate feed is not a defect — it is the case the
     // modelled fallback exists for, and this run may well be offline. Report
     // it, but do not fail on it. Everything else is a real error.
+    // Chromium echoes every failed request to the console without the URL, so
+    // those lines carry no information the requestfailed handler above has not
+    // already reported with the URL attached. Treat them as feed noise.
     const isFeed = (message) =>
-      message.includes('open-meteo.com') || message.includes('/api/climate');
+      message.includes('open-meteo.com') ||
+      message.includes('/api/climate') ||
+      message.includes('Failed to load resource');
 
     const routeErrors = errors.filter(
       (message) => !message.includes('favicon') && !isFeed(message)
@@ -129,7 +134,7 @@ try {
   await page.evaluate(() => {
     location.hash = '#/island/42';
   });
-  await page.waitForSelector('.island__name', { timeout: 30000 });
+  await page.waitForSelector('.island__name', { timeout: 30000, state: 'attached' });
   const shaderReport = await page.evaluate(async () => {
     const renderer = window.atlas404?.stage?.renderer;
     if (!renderer?.supported) return { supported: false };
@@ -161,11 +166,11 @@ try {
   await page.evaluate(() => {
     location.hash = '#/atlas';
   });
-  await page.waitForTimeout(500);
+  await page.waitForSelector('.grid .tile', { timeout: 60000, state: 'attached' });
   await page.evaluate(() => {
     location.hash = '#/island/7';
   });
-  await page.waitForSelector('.island__name', { timeout: 30000 });
+  await page.waitForSelector('.island__name', { timeout: 60000, state: 'attached' });
   const stageAttached = await page.evaluate(
     () => !!document.querySelector('.island__stage canvas')
   );

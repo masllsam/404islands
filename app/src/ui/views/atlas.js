@@ -142,6 +142,9 @@ export function atlas(app) {
     const visible = new Set();
     const mounted = new Map();
 
+    // Leaving the atlas abandons any tile still waiting to be drawn.
+    dispose(() => app.thumbnails.clear());
+
     const observer = new IntersectionObserver(
       (entries) => {
         for (const entry of entries) {
