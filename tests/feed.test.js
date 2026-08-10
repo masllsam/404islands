@@ -255,3 +255,63 @@ test('an update event names exactly the islands that changed', async () => {
   assert.equal(updates.length, 1);
   assert.deepEqual(updates[0].slice().sort((a, b) => a - b), [200, 201, 202]);
 });
+
+test('the proxy is preferred, and a bad minute does not abandon it', async () => {
+  let proxyCalls = 0;
+  let proxyFails = true;
+
+  const proxy = createServer((req, res) => {
+    proxyCalls++;
+    if (proxyFails) {
+      // What our own server returns when Open-Meteo is unreachable.
+      res.writeHead(502, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Upstream climate data unavailable.' }));
+      return;
+    }
+    res.writeHead(200, { 'content-type': 'application/json' });
+    res.end(JSON.stringify(forecastFor(0)));
+  });
+  await new Promise((resolve) => proxy.listen(0, '127.0.0.1', resolve));
+  const proxyBase = `http://127.0.0.1:${proxy.address().port}/api/climate`;
+
+  try {
+    const service = makeService({ proxy: proxyBase, marine: false });
+
+    // A 502 falls through to the direct call, and the record still arrives.
+    await service.ensure([getIsland(150)]);
+    assert.equal(service.get(getIsland(150)).source, 'observed');
+    assert.ok(proxyCalls > 0, 'the proxy was never tried');
+    assert.notEqual(service.proxyAvailable, false, 'a 502 must not disable the proxy for good');
+
+    // Once it recovers, the proxy is used again rather than the upstream.
+    proxyFails = false;
+    const before = proxyCalls;
+    await service.ensure([getIsland(151)]);
+    assert.ok(proxyCalls > before, 'the proxy was not retried after recovering');
+    assert.equal(service.proxyAvailable, true);
+  } finally {
+    await new Promise((resolve) => proxy.close(resolve));
+  }
+});
+
+test('a missing proxy is only discovered once', async () => {
+  let calls = 0;
+  const proxy = createServer((req, res) => {
+    calls++;
+    res.writeHead(404).end('no such endpoint');
+  });
+  await new Promise((resolve) => proxy.listen(0, '127.0.0.1', resolve));
+  const proxyBase = `http://127.0.0.1:${proxy.address().port}/api/climate`;
+
+  try {
+    const service = makeService({ proxy: proxyBase, marine: false });
+    await service.ensure([getIsland(160)]);
+    await service.ensure([getIsland(161)]);
+    await service.ensure([getIsland(162)]);
+
+    assert.equal(calls, 1, 'a static deployment must not keep asking for a proxy that is not there');
+    assert.equal(service.get(getIsland(162)).source, 'observed');
+  } finally {
+    await new Promise((resolve) => proxy.close(resolve));
+  }
+});

@@ -260,25 +260,32 @@ export class ClimateService extends EventTarget {
    * if the proxy is absent so a static deployment only pays that cost once.
    */
   async #request(kind, directUrl, params) {
+    const query = params.toString();
+
     if (this.proxy && this.proxyAvailable !== false) {
       try {
-        const url = `${this.proxy}/${kind}?${params.toString()}`;
-        const res = await fetch(url, { headers: { accept: 'application/json' } });
+        const res = await fetch(`${this.proxy}/${kind}?${query}`, {
+          headers: { accept: 'application/json' },
+        });
         if (res.ok) {
           this.proxyAvailable = true;
           return await res.json();
         }
-        // A 4xx from our own proxy means it is there but unhappy; only a
-        // missing proxy should demote us to direct calls.
+        // A missing proxy is permanent — this is a static deployment, so stop
+        // asking. A 5xx is the proxy having a bad minute, usually because its
+        // own upstream is down; fall through to a direct call for this request
+        // only and keep using the proxy afterwards, since it is the polite
+        // path and the one that spares the upstream.
         if (res.status === 404 || res.status === 501) this.proxyAvailable = false;
-        else throw new Error(`proxy ${kind}: ${res.status}`);
-      } catch (err) {
+      } catch {
+        // The proxy could not be reached at all. On a first attempt that means
+        // there isn't one; later it means the network is having trouble, which
+        // a direct call is unlikely to fix but is free to attempt.
         if (this.proxyAvailable === null) this.proxyAvailable = false;
-        else throw err;
       }
     }
 
-    const res = await fetch(`${directUrl}?${params.toString()}`, {
+    const res = await fetch(`${directUrl}?${query}`, {
       headers: { accept: 'application/json' },
     });
     if (!res.ok) throw new Error(`open-meteo ${kind}: ${res.status}`);
