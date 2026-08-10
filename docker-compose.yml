@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   db:
     image: postgres:13
@@ -30,7 +28,7 @@ services:
     depends_on:
       - db
     volumes:
-      - ./404islands/404islands-app/src/backend:/app/src/backend
+      - ./404islands-app/src/backend:/app/src/backend
       - ./404islands-app/package.json:/app/package.json
       - ./404islands-app/package-lock.json:/app/package-lock.json
       - /app/node_modules # Exclude node_modules from host mount

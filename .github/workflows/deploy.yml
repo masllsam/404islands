@@ -1,42 +1,67 @@
+# Alternative, pm2-based deploy to the Oracle Cloud host.
+#
+# This is manual-only (workflow_dispatch). The push-to-main deploy lives in
+# ci-cd.yml and deploys with Docker Compose; running both on every push would
+# have the two strategies fight over the same host.
 name: Deploy Archipelago to Oracle Cloud
 
 on:
-  push:
-    branches: [ main ]
   workflow_dispatch:
 
 env:
-  NODE_VERSION: '18.x'
+  NODE_VERSION: '20.x'
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Setup Node.js
-      uses: actions/setup-node@v3
+      uses: actions/setup-node@v4
       with:
         node-version: ${{ env.NODE_VERSION }}
         cache: 'npm'
+        cache-dependency-path: 404islands-app/package-lock.json
 
     - name: Install dependencies
-      run: npm install
+      run: npm ci
+      working-directory: ./404islands-app
 
-    - name: Build frontend
-      run: npm run build --if-present
+    - name: Run tests
+      run: npm test
+      working-directory: ./404islands-app
+
+    - name: Check deploy configuration
+      id: check
+      env:
+        ORACLE_SSH_KEY: ${{ secrets.ORACLE_SSH_KEY }}
+        ORACLE_HOST: ${{ secrets.ORACLE_HOST }}
+        ORACLE_USER: ${{ secrets.ORACLE_USER }}
+      run: |
+        if [ -z "$ORACLE_SSH_KEY" ] || [ -z "$ORACLE_HOST" ] || [ -z "$ORACLE_USER" ]; then
+          echo "::error::Set the ORACLE_SSH_KEY, ORACLE_HOST and ORACLE_USER repository secrets before running this workflow."
+          exit 1
+        fi
 
     - name: Setup SSH
+      env:
+        ORACLE_SSH_KEY: ${{ secrets.ORACLE_SSH_KEY }}
+        ORACLE_HOST: ${{ secrets.ORACLE_HOST }}
       run: |
         mkdir -p ~/.ssh
-        echo "${{ secrets.ORACLE_SSH_KEY }}" > ~/.ssh/oracle_key
+        echo "$ORACLE_SSH_KEY" > ~/.ssh/oracle_key
         chmod 600 ~/.ssh/oracle_key
-        ssh-keyscan -H "132.226.223.180" >> ~/.ssh/known_hosts
+        ssh-keyscan -H "$ORACLE_HOST" >> ~/.ssh/known_hosts
 
     - name: Deploy to Oracle Cloud
+      env:
+        ORACLE_HOST: ${{ secrets.ORACLE_HOST }}
+        ORACLE_USER: ${{ secrets.ORACLE_USER }}
       run: |
-        scp -i ~/.ssh/oracle_key -r . opc@132.226.223.180:~/archipelago
-        ssh -i ~/.ssh/oracle_key opc@132.226.223.180 'cd ~/archipelago && npm install --production'
-        ssh -i ~/.ssh/oracle_key opc@132.226.223.180 'cd ~/archipelago && pm2 restart archipelago || pm2 start src/backend/server.js --name archipelago'
-        ssh -i ~/.ssh/oracle_key opc@132.226.223.180 'pm2 save'
+        target="$ORACLE_USER@$ORACLE_HOST"
+        scp -i ~/.ssh/oracle_key -r 404islands-app "$target:~/archipelago"
+        ssh -i ~/.ssh/oracle_key "$target" 'cd ~/archipelago && npm ci --omit=dev'
+        ssh -i ~/.ssh/oracle_key "$target" 'cd ~/archipelago && pm2 restart archipelago || pm2 start src/backend/server.js --name archipelago'
+        ssh -i ~/.ssh/oracle_key "$target" 'pm2 save'

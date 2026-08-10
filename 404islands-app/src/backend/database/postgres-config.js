@@ -1,5 +1,10 @@
+const path = require('path');
 const { Sequelize } = require('sequelize');
-require('dotenv').config({ path: './.env' });
+
+// Resolve relative to this file rather than the working directory, so the
+// config loads the same way whether it is run via npm scripts or from Docker.
+// Missing file is fine: in Docker the values come from the container env.
+require('dotenv').config({ path: path.resolve(__dirname, '../../../.env') });
 
 class ConnectionManager {
   constructor() {

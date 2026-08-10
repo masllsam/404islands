@@ -1,0 +1,17 @@
+node_modules/
+npm-debug.log*
+
+# Local secrets and machine-specific config. Commit .env.example instead.
+.env
+.env.local
+.env.*.local
+
+# Build output
+dist/
+build/
+coverage/
+
+# Editor / OS noise
+.DS_Store
+.idea/
+.vscode/

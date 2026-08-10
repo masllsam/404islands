@@ -20,19 +20,20 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: 404islands-app/package-lock.json
 
     - name: Install dependencies
-      run: npm install
+      run: npm ci
       working-directory: ./404islands-app
-
-    - name: Build Docker images
-      run: docker-compose build
-      working-directory: .
 
     - name: Run tests
       run: npm test
       working-directory: ./404islands-app
-      continue-on-error: true # Allow pipeline to continue even if tests fail for now
+
+    - name: Build Docker images
+      run: docker compose build
+      working-directory: .
 
   deploy:
     needs: build-and-test
@@ -43,7 +44,24 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
+      # Secrets are not available to job-level `if:`, so the guard lives here.
+      # Without it, every push to main fails on a repo that has no OCI host set up.
+    - name: Check deploy configuration
+      id: check
+      env:
+        SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        OCI_HOST: ${{ secrets.OCI_HOST }}
+        OCI_USERNAME: ${{ secrets.OCI_USERNAME }}
+      run: |
+        if [ -z "$SSH_PRIVATE_KEY" ] || [ -z "$OCI_HOST" ] || [ -z "$OCI_USERNAME" ]; then
+          echo "configured=false" >> "$GITHUB_OUTPUT"
+          echo "::notice::Skipping deploy: set the SSH_PRIVATE_KEY, OCI_HOST and OCI_USERNAME repository secrets to enable it."
+        else
+          echo "configured=true" >> "$GITHUB_OUTPUT"
+        fi
+
     - name: Deploy to OCI
+      if: steps.check.outputs.configured == 'true'
       env:
         SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
         OCI_HOST: ${{ secrets.OCI_HOST }}
@@ -53,10 +71,11 @@ jobs:
         mkdir -p ~/.ssh
         echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
         chmod 600 ~/.ssh/id_rsa
-        ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa $OCI_USERNAME@$OCI_HOST "
+        ssh-keyscan -H "$OCI_HOST" >> ~/.ssh/known_hosts
+        ssh -i ~/.ssh/id_rsa "$OCI_USERNAME@$OCI_HOST" "
           sudo systemctl start docker || true
           cd 404islands
-          docker-compose pull
-          docker-compose up -d --build
+          docker compose pull
+          docker compose up -d --build
         "
         echo "Deployment to OCI complete."
