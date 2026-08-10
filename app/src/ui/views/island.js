@@ -119,7 +119,10 @@ export function islandView(app) {
 
     const light = daylight(island.lat, island.lon);
 
-    panel.append(
+    // Built as a filtered list rather than passed straight to append(), which
+    // stringifies a null child into the literal word "null" — and most islands
+    // have no epithet.
+    const panelParts = [
       h('div.island__number', `Island No. ${island.id} of 404`),
       h('h1.island__name', island.name),
       island.epithet ? h('div.island__epithet', island.epithet) : null,
@@ -167,8 +170,9 @@ export function islandView(app) {
             `No. ${other.id} · ${Math.round(km)} km`
           )
         )
-      )
-    );
+      ),
+    ];
+    panel.append(...panelParts.filter(Boolean));
 
     // ── Live wiring ──────────────────────────────────────────────────────
 

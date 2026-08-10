@@ -14,7 +14,7 @@ Stand still and the render keeps refining until it is clean enough to print.
 
 ```
 npm start          # http://localhost:8080
-npm test           # 58 tests, no dependencies
+npm test           # 67 tests, no dependencies
 node scripts/smoke.mjs   # browser checks (needs a global Playwright)
 ```
 
@@ -112,9 +112,10 @@ byte-identical across separate processes, that the solar equations agree with
 known astronomy, that the modelled climate is physically plausible for every
 island on every date, that the live feed parses Open-Meteo's actual response
 shape (including array responses, marine nulls and zone-less timestamps)
-against a fake upstream, and that the server refuses path traversal and
-validates reservations. `scripts/smoke.mjs` covers the rest: every route
-mounts, all three shader tiers compile and run, and the shared GL context
+against a fake upstream, that the server refuses path traversal and validates
+reservations, and that the shader sources arrived intact with their uniforms
+matching what the renderer sets. `scripts/smoke.mjs` covers the rest: every
+route mounts, all three shader tiers compile and run, and the shared GL context
 survives navigation.
 
 The terrain mathematics lives **only** in `app/src/gl/shaders/scene.glsl.js`.

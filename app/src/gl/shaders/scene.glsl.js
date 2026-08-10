@@ -414,7 +414,7 @@ float terrainAO(vec3 p, vec3 n) {
 // Sum of trochoidal waves travelling with the live wind, plus a fine chop
 // whose amplitude tracks wind speed. Returns (height, dH/dx, dH/dz).
 //
-// `detail` fades the highest-frequency ripple out with distance. Without it a
+// The detail parameter fades the highest-frequency ripple out with distance. Without it a
 // pixel near the horizon covers dozens of wave periods and the normal it gets
 // is essentially random, which reads as stipple across the whole far sea — the
 // classic specular aliasing that no amount of supersampling fixes cheaply.
