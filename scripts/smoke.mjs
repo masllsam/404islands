@@ -87,10 +87,14 @@ page.on('requestfailed', (request) =>
 );
 
 try {
+  // One page load, then navigate by hash. That is both faster and a better
+  // test: it exercises the router's teardown path and proves the shared GL
+  // context survives being re-parented between views, which a fresh load
+  // would hide.
+  await page.goto(`${BASE}/#/`, { waitUntil: 'load' });
+
   for (const [route, name, selector] of ROUTES) {
     errors.length = 0;
-    await page.goto(`${BASE}/#${route}`, { waitUntil: 'load' });
-    // Hash changes on an already-loaded page do not reload it.
     await page.evaluate((r) => {
       location.hash = `#${r}`;
     }, route);
@@ -114,7 +118,9 @@ try {
   }
 
   // Shaders: all three tiers must compile, not just the interactive one.
-  await page.goto(`${BASE}/#/island/42`, { waitUntil: 'load' });
+  await page.evaluate(() => {
+    location.hash = '#/island/42';
+  });
   await page.waitForSelector('.island__name', { timeout: 30000 });
   const shaderReport = await page.evaluate(async () => {
     const renderer = window.atlas404?.stage?.renderer;

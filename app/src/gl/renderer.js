@@ -369,7 +369,10 @@ export class IslandRenderer {
       // nothing is waiting on it — but not so slow that the page stops
       // responding. What the device managed while moving is the best evidence
       // of what it can manage while settling.
-      const capable = this.interactiveScale >= 0.85;
+      // Both pieces of evidence matter. Scale alone is not enough at startup,
+      // when it is still 1.0 because nothing has yet had a chance to lower it —
+      // and the first settling frame is the one most likely to jank.
+      const capable = this.interactiveScale >= 0.85 && this.frameMs < 22;
       const tier = capable ? 2 : 1;
       let scale = Math.min(1, this.interactiveScale + (capable ? 0.2 : 0.1));
 

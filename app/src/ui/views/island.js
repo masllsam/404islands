@@ -14,6 +14,7 @@ import { getIsland } from '../../core/catalog.js';
 import { haversineKm } from '../../core/geo.js';
 import { daylight } from '../../core/solar.js';
 import { Router } from '../router.js';
+import { notFound } from './notfound.js';
 
 /** The three catalogued islands physically nearest this one. */
 function neighbours(app, island, limit = 3) {
@@ -80,9 +81,11 @@ export function islandView(app) {
     const dispose = disposable();
     const island = getIsland(Number(context.params[0]));
 
+    // Render not-found in place rather than redirecting. A redirect would
+    // race the router's own teardown, throw away the URL the visitor typed,
+    // and lose the number that lets the page say which island does not exist.
     if (!island) {
-      Router.go('/nowhere', { replace: true });
-      return () => {};
+      return notFound(app)(context, outlet);
     }
 
     clear(outlet);
