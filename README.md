@@ -95,10 +95,17 @@ app/                  the artwork — static, no build
     climate/          live feed, modelled fallback, derivation to uniforms
     gl/               context, renderer, thumbnail factory, shaders
     ui/               router, views, components, formatting
+  dev/contact-sheet.html  a development tool (see below)
 server/index.js       static host + climate cache + reservations
 tests/                node:test, no dependencies
 scripts/smoke.mjs     browser checks
 ```
+
+`/dev/contact-sheet.html` renders a grid of islands through the same path the
+atlas uses, so a shader change can be judged across archetypes, latitudes and
+times of day in one look. `?n=1,42,217` picks islands; `?hour=6` shifts the
+clock to catch daylight on the other side of the world. Almost every lighting
+decision in the shader was made by staring at one of these.
 
 The test suite covers what can be checked without a GPU: that the catalogue is
 byte-identical across separate processes, that the solar equations agree with
