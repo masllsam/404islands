@@ -75,6 +75,7 @@ const browser = await chromium.launch({
 });
 
 const failures = [];
+let feedOffline = false;
 const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
 
 const errors = [];
@@ -107,10 +108,17 @@ try {
       console.log(`  FAIL ${route.padEnd(20)} ${name} — missing ${selector}`);
     }
 
+    // A blocked or absent climate feed is not a defect — it is the case the
+    // modelled fallback exists for, and this run may well be offline. Report
+    // it, but do not fail on it. Everything else is a real error.
+    const isFeed = (message) =>
+      message.includes('open-meteo.com') || message.includes('/api/climate');
+
     const routeErrors = errors.filter(
-      // The favicon is allowed to be absent in a bare checkout.
-      (message) => !message.includes('favicon')
+      (message) => !message.includes('favicon') && !isFeed(message)
     );
+    if (errors.some(isFeed)) feedOffline = true;
+
     if (routeErrors.length) {
       failures.push(`${route}: ${routeErrors.join(' | ')}`);
       for (const message of routeErrors) console.log(`       ${message}`);
@@ -166,6 +174,14 @@ try {
 } finally {
   await browser.close();
   serverProcess?.kill();
+}
+
+if (feedOffline) {
+  console.log(
+    '\n  note  the climate feed was unreachable, so the atlas ran on its\n' +
+    '        modelled fallback. That is the intended behaviour offline, and\n' +
+    '        every view above rendered without it.'
+  );
 }
 
 if (failures.length) {

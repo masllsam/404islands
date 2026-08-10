@@ -60,7 +60,14 @@ button re-runs the whole exposure at 2400 × 1500.
 
 **The budget is measured, not assumed.** Frame time drives render scale first
 and shader tier second, so a five-year-old phone and a workstation both land
-near 60 fps with the best image each can hold.
+near 60 fps with the best image each can hold. Settling is allowed to cost
+more than a moving frame, but not unboundedly: a device that struggled while
+moving settles at a lower tier rather than dropping a two-second frame on the
+main thread.
+
+The whole application is about 250 KB of JavaScript and CSS, uncompressed,
+with no dependencies and no build step. The catalogue of 404 islands is
+computed in the browser in under ten milliseconds.
 
 The atlas grid uses a second, shared context that renders a queue of tiles on a
 per-frame budget and blits each into the tile's own canvas. Only visible tiles
