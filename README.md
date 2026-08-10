@@ -14,7 +14,7 @@ Stand still and the render keeps refining until it is clean enough to print.
 
 ```
 npm start          # http://localhost:8080
-npm test           # 36 tests, no dependencies
+npm test           # 58 tests, no dependencies
 node scripts/smoke.mjs   # browser checks (needs a global Playwright)
 ```
 
@@ -100,6 +100,16 @@ tests/                node:test, no dependencies
 scripts/smoke.mjs     browser checks
 ```
 
+The test suite covers what can be checked without a GPU: that the catalogue is
+byte-identical across separate processes, that the solar equations agree with
+known astronomy, that the modelled climate is physically plausible for every
+island on every date, that the live feed parses Open-Meteo's actual response
+shape (including array responses, marine nulls and zone-less timestamps)
+against a fake upstream, and that the server refuses path traversal and
+validates reservations. `scripts/smoke.mjs` covers the rest: every route
+mounts, all three shader tiers compile and run, and the shared GL context
+survives navigation.
+
 The terrain mathematics lives **only** in `app/src/gl/shaders/scene.glsl.js`.
 There is no second CPU implementation to fall out of sync with it; island
 statistics that a human reads are derived from the catalogue parameters, never
@@ -150,7 +160,9 @@ Things this project could have faked and deliberately does not:
   button itself, that no payment is taken.
 - **No ownership claims that are not true.** Acquisition buys a listing in the
   atlas and a physical plotter drawing. Not a deed, not a token, not a legal
-  interest in anything.
+  interest in anything. The acquisition page also says plainly that physical
+  fulfilment is not running yet, so a reservation is a place in a queue and a
+  stated price rather than a purchase.
 - **Wave amplitude is exaggerated**, consistently. One world unit is roughly
   900 m of island, at which scale real metres of swell would be invisible.
   Relative sea states stay honest; absolute ones are scaled.

@@ -413,7 +413,12 @@ float terrainAO(vec3 p, vec3 n) {
 
 // Sum of trochoidal waves travelling with the live wind, plus a fine chop
 // whose amplitude tracks wind speed. Returns (height, dH/dx, dH/dz).
-vec3 waveField(vec2 p) {
+//
+// `detail` fades the highest-frequency ripple out with distance. Without it a
+// pixel near the horizon covers dozens of wave periods and the normal it gets
+// is essentially random, which reads as stipple across the whole far sea — the
+// classic specular aliasing that no amount of supersampling fixes cheaply.
+vec3 waveField(vec2 p, float detail) {
   float h = 0.0;
   vec2 d = vec2(0.0);
 
@@ -433,7 +438,8 @@ vec3 waveField(vec2 p) {
   }
 
   // Wind ripple: high-frequency detail that makes the specular glitter.
-  float ripple = uWaveAmp * (0.35 + uWaveChop * 1.6);
+  float ripple = uWaveAmp * (0.35 + uWaveChop * 1.6) * detail;
+  if (ripple < 1e-6) return vec3(h, d);
   vec2 rp = p * 26.0 + wind * uTime * 1.1;
   float rn = perlin(rp, uNoiseSeed + 8191u);
   h += rn * ripple * 0.30;
@@ -792,11 +798,12 @@ void main() {
     if (tWater < MAX_DIST && (!hitTerrain || tWater < tTerrain)) {
       for (int i = 0; i < 3; i++) {
         vec3 wp = ro + rd * tWater;
-        vec3 wf = waveField(wp.xz);
+        vec3 wf = waveField(wp.xz, 1.0);
         tWater += (wf.x - wp.y) / rd.y;
       }
       vec3 wp = ro + rd * tWater;
-      vec3 wf = waveField(wp.xz);
+      float detail = 1.0 / (1.0 + tWater * tWater * 0.055);
+      vec3 wf = waveField(wp.xz, detail);
       waterN = normalize(vec3(-wf.y, 1.0, -wf.z));
       hitWater = tWater > 0.0 && tWater < MAX_DIST && (!hitTerrain || tWater < tTerrain);
     }

@@ -18,8 +18,8 @@
 
 import { simulateClimate } from './simulate.js';
 
-const FORECAST_URL = 'https://api.open-meteo.com/v1/forecast';
-const MARINE_URL = 'https://marine-api.open-meteo.com/v1/marine';
+export const FORECAST_URL = 'https://api.open-meteo.com/v1/forecast';
+export const MARINE_URL = 'https://marine-api.open-meteo.com/v1/marine';
 
 const CURRENT_FIELDS = [
   'temperature_2m',
@@ -114,12 +114,19 @@ export class ClimateService extends EventTarget {
    *   back to calling Open-Meteo directly, so a purely static deployment works.
    * @param {number} [options.ttl] Milliseconds before a record is refetched.
    * @param {boolean} [options.marine] Request sea state as well as weather.
+   * @param {string} [options.forecastUrl] Override the upstream — useful for a
+   *   self-hosted Open-Meteo mirror, and for testing against a fake one.
+   * @param {string} [options.marineUrl]
+   * @param {boolean} [options.persist] Write records to localStorage.
    */
   constructor(options = {}) {
     super();
     this.proxy = options.proxy === undefined ? '/api/climate' : options.proxy;
     this.ttl = options.ttl || DEFAULT_TTL;
     this.wantMarine = options.marine !== false;
+    this.forecastUrl = options.forecastUrl || FORECAST_URL;
+    this.marineUrl = options.marineUrl || MARINE_URL;
+    this.persist = options.persist !== false;
 
     /** @type {Map<number, object>} */
     this.records = new Map();
@@ -215,9 +222,9 @@ export class ClimateService extends EventTarget {
 
     try {
       const [weather, marine] = await Promise.all([
-        this.#request('forecast', FORECAST_URL, weatherParams),
+        this.#request('forecast', this.forecastUrl, weatherParams),
         this.wantMarine
-          ? this.#request('marine', MARINE_URL, marineParams).catch(() => null)
+          ? this.#request('marine', this.marineUrl, marineParams).catch(() => null)
           : Promise.resolve(null),
       ]);
 
@@ -281,7 +288,7 @@ export class ClimateService extends EventTarget {
   // ── Persistence ────────────────────────────────────────────────────────
 
   #restore() {
-    if (typeof localStorage === 'undefined') return;
+    if (!this.persist || typeof localStorage === 'undefined') return;
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) return;
@@ -301,7 +308,7 @@ export class ClimateService extends EventTarget {
   }
 
   #schedulePersist() {
-    if (typeof localStorage === 'undefined' || this.persistTimer) return;
+    if (!this.persist || typeof localStorage === 'undefined' || this.persistTimer) return;
     this.persistTimer = setTimeout(() => {
       this.persistTimer = null;
       try {

@@ -108,8 +108,15 @@ export const OCEAN_ORDER = [
   OCEANS.SOUTHERN,
 ];
 
-/** Wrap a longitude into [-180, 180). */
+/**
+ * Wrap a longitude into (-180, 180].
+ *
+ * Values already in range are returned untouched: the obvious modular
+ * expression introduces a rounding error of about 3e-14 degrees, which is
+ * nothing on a chart but is enough to make a coordinate fail to equal itself.
+ */
 export function normalizeLon(lon) {
+  if (lon > -180 && lon <= 180) return lon;
   let l = ((lon + 180) % 360 + 360) % 360 - 180;
   if (l === -180) l = 180;
   return l;

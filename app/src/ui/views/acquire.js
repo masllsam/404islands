@@ -204,6 +204,15 @@ export function acquire(app) {
             'prices on it, that is the point.',
           ]),
 
+          h('div.notice', [
+            h('strong', 'And what has not happened yet. '),
+            'The plotter is not running. Physical fulfilment starts once there are ',
+            'enough reservations to justify setting it up, and until then a ',
+            'reservation is a place in a queue and a stated price — nothing more. ',
+            'The prices above are what the tiers will cost, not what anyone has ',
+            'been asked to pay.',
+          ]),
+
           h('div.label', { style: { marginTop: '3rem' } }, 'Reserve'),
           form,
           result
