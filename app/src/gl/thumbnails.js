@@ -14,7 +14,7 @@
 import { createContext, drawFullscreen, Program, RenderTarget } from './gl.js';
 import { VERTEX_SHADER, SCENE_FRAGMENT } from './shaders/scene.glsl.js';
 import { PRESENT_FRAGMENT, ACCUMULATE_FRAGMENT } from './shaders/present.glsl.js';
-import { sceneUniforms } from './uniforms.js';
+import { sceneUniforms, exposureFor } from './uniforms.js';
 
 /** Sub-pixel offsets for the few samples a tile can afford. */
 const TILE_JITTER = [
@@ -177,7 +177,7 @@ export class ThumbnailFactory {
     present.set({
       uResolution: resolution,
       uTime: island.number * 3.1,
-      uExposure: 0.92,
+      uExposure: exposureFor(scene),
       uRain: scene.rain,
       uSnow: scene.snow,
       uWindDir: scene.windDir,

@@ -19,15 +19,30 @@ import * as fmt from '../format.js';
 import { OCEAN_ORDER } from '../../core/geo.js';
 import { ARCHETYPES } from '../../core/archetypes.js';
 
+/**
+ * Sorts are expressed as a key function plus a direction, so the live ones can
+ * read a climate record without writing scratch fields onto the catalogue —
+ * those objects are shared, permanent, and nobody's notepad.
+ */
 const SORTS = {
-  number: { label: 'Catalogue order', compare: (a, b) => a.number - b.number },
-  warmest: { label: 'Warmest now', climate: true, compare: (a, b) => b._t - a._t },
-  coldest: { label: 'Coldest now', climate: true, compare: (a, b) => a._t - b._t },
-  wildest: { label: 'Roughest sea', climate: true, compare: (a, b) => b._w - a._w },
-  calmest: { label: 'Calmest', climate: true, compare: (a, b) => a._w - b._w },
-  singular: { label: 'Most singular', compare: (a, b) => b.singularity - a.singularity },
-  north: { label: 'Northmost', compare: (a, b) => b.lat - a.lat },
-  south: { label: 'Southmost', compare: (a, b) => a.lat - b.lat },
+  number: { label: 'Catalogue order', key: (island) => island.number, dir: 1 },
+  warmest: { label: 'Warmest now', live: true, key: (i, c) => c.temperature, dir: -1 },
+  coldest: { label: 'Coldest now', live: true, key: (i, c) => c.temperature, dir: 1 },
+  wildest: {
+    label: 'Roughest sea',
+    live: true,
+    key: (i, c) => c.waveHeight ?? c.windSpeed / 40,
+    dir: -1,
+  },
+  calmest: {
+    label: 'Calmest',
+    live: true,
+    key: (i, c) => c.waveHeight ?? c.windSpeed / 40,
+    dir: 1,
+  },
+  singular: { label: 'Most singular', key: (island) => island.singularity, dir: -1 },
+  north: { label: 'Northmost', key: (island) => island.lat, dir: -1 },
+  south: { label: 'Southmost', key: (island) => island.lat, dir: 1 },
 };
 
 export function atlas(app) {
@@ -180,16 +195,15 @@ export function atlas(app) {
 
     function build() {
       const sort = SORTS[state.sort] || SORTS.number;
-      let list = app.islands.filter(matches);
-
-      if (sort.climate) {
-        for (const island of list) {
-          const c = app.climateFor(island);
-          island._t = c.temperature;
-          island._w = c.waveHeight ?? c.windSpeed / 40;
-        }
-      }
-      list = list.slice().sort(sort.compare);
+      const list = app.islands
+        .filter(matches)
+        .map((island) => ({
+          island,
+          key: sort.key(island, sort.live ? app.climateFor(island) : null),
+        }))
+        // Catalogue number breaks every tie, so the order is never arbitrary.
+        .sort((a, b) => (a.key - b.key) * sort.dir || a.island.number - b.island.number)
+        .map((entry) => entry.island);
 
       observer.disconnect();
       mounted.clear();

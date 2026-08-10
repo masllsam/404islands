@@ -345,21 +345,27 @@
 .island {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(320px, 430px);
-  align-items: start;
+  align-items: stretch;
   min-height: 100vh;
 }
 @media (max-width: 1000px) {
   .island { grid-template-columns: 1fr; }
 }
 
-.island__stage {
+/* The stage holds still while the label scrolls past it — which needs the
+   sticky element to be the grid child, not something inside it. */
+.island__frame {
   position: sticky;
   top: 0;
+  align-self: start;
   height: 100vh;
   height: 100svh;
 }
+.island__stage {
+  height: 100%;
+}
 @media (max-width: 1000px) {
-  .island__stage { position: relative; height: 62vh; min-height: 380px; }
+  .island__frame { position: relative; height: 62vh; min-height: 380px; }
 }
 
 .island__panel {
@@ -647,4 +653,36 @@
   color: var(--fg-faint);
   background:
     radial-gradient(90% 70% at 50% 85%, rgba(24, 44, 66, 0.55), rgba(5, 7, 10, 1));
+}
+
+/* ── Bare view ─────────────────────────────────────────────────────────── */
+
+body.bare .masthead,
+body.bare .colophon,
+body.bare .skip-link { display: none; }
+
+.bare { position: relative; }
+.bare__stage {
+  height: 100vh;
+  height: 100svh;
+}
+.bare__caption {
+  position: absolute;
+  left: var(--gutter);
+  bottom: var(--gutter);
+  z-index: 3;
+  text-shadow: 0 1px 24px rgba(0, 0, 0, 0.85);
+  pointer-events: none;
+}
+.bare__name {
+  font-family: var(--serif);
+  font-size: clamp(1.8rem, 4vw, 3.2rem);
+  line-height: 1.05;
+}
+.bare__meta {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  color: var(--fg-dim);
+  line-height: 1.8;
+  margin-top: 0.6rem;
 }

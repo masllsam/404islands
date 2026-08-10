@@ -27,6 +27,54 @@ function neighbours(app, island, limit = 3) {
     .slice(0, limit);
 }
 
+/**
+ * Full-bleed, chrome-free: one island, its name, and the time where it is.
+ * Meant to be left running on a wall.
+ */
+function mountBare(app, island, dispose, outlet) {
+  document.body.classList.add('bare');
+  dispose(() => document.body.classList.remove('bare'));
+
+  const stageHost = h('div.stage.bare__stage');
+  const caption = h('div.bare__caption');
+
+  const paint = () => {
+    const readings = app.readingsFor(island);
+    caption.replaceChildren(
+      h('div.bare__name', island.name),
+      h('div.bare__meta', [
+        `No. ${island.id} · ${island.coordLabel}`,
+        h('br'),
+        `${fmt.solarClock(island.lon)} local · ${fmt.temperature(readings.temperature)} · ${readings.condition}`,
+        h('br'),
+        `${readings.windFrom} ${fmt.speed(readings.windSpeed)} · ${readings.sea.label} sea`,
+      ])
+    );
+    app.stage.updateScene(app.sceneFor(island));
+  };
+
+  outlet.appendChild(h('div.bare', stageHost, caption));
+
+  app.stage.show(island, app.sceneFor(island));
+  app.stage.attach(stageHost);
+  app.refresh([island]);
+  paint();
+
+  const onClimate = () => paint();
+  app.addEventListener('climate', onClimate);
+  app.addEventListener('tick', onClimate);
+  const poll = setInterval(() => app.refresh([island]), 5 * 60 * 1000);
+
+  dispose(() => {
+    app.removeEventListener('climate', onClimate);
+    app.removeEventListener('tick', onClimate);
+    clearInterval(poll);
+    app.stage.detach();
+  });
+
+  return dispose.dispose;
+}
+
 export function islandView(app) {
   return (context, outlet) => {
     const dispose = disposable();
@@ -40,12 +88,17 @@ export function islandView(app) {
     clear(outlet);
     window.scrollTo(0, 0);
 
+    // The bare view: the island and nothing else. This is what the Guardian
+    // tier promises, so it has to actually exist.
+    if (context.query.get('bare') === '1') {
+      return mountBare(app, island, dispose, outlet);
+    }
+
     const stageHost = h('div.stage.island__stage');
     const meter = exposureMeter();
 
     const stageWrap = h(
-      'div',
-      { style: { position: 'relative' } },
+      'div.island__frame',
       stageHost,
       h('div.stage__hint', meter.node, h('span', 'drag to orbit · scroll to zoom'))
     );
@@ -85,6 +138,10 @@ export function islandView(app) {
         h('li', island.archetype.name)
       ),
       h('div.island__actions', downloadButton, copyButton,
+        h('a.button.button--quiet', {
+          href: `#/island/${island.number}?bare=1`,
+          title: 'The island alone, with none of this interface',
+        }, 'Full bleed'),
         h('a.button.button--primary', { href: `#/acquire?island=${island.number}` }, 'Acquire this island')),
       h('div.label', 'Fixed properties'),
       h(

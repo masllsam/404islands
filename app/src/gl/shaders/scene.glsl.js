@@ -88,18 +88,21 @@ uniform float uAurora;
   #define MAX_DIST 12.0
   #define CLOUD_LAYERS 1
   #define AO_ON 0
+  #define REFINE_STEPS 3
 #elif QUALITY == 1
   #define MARCH_STEPS 130
   #define SHADOW_STEPS 14
   #define MAX_DIST 16.0
   #define CLOUD_LAYERS 2
   #define AO_ON 1
+  #define REFINE_STEPS 5
 #else
   #define MARCH_STEPS 240
   #define SHADOW_STEPS 28
   #define MAX_DIST 22.0
   #define CLOUD_LAYERS 2
   #define AO_ON 1
+  #define REFINE_STEPS 7
 #endif
 
 // ════════════════════════════════════════════════════════════════════════
@@ -345,7 +348,20 @@ bool marchTerrain(vec3 ro, vec3 rd, out float tHit) {
 
     float gap = p.y - terrainHeight(p.xz, lodOctaves(t));
     if (gap < 0.0) {
-      tHit = lastT + (t - lastT) * lastGap / max(lastGap - gap, 1e-6);
+      // Linear interpolation of the crossing is fine on a slope and visibly
+      // stepped on a cliff, where the height changes far faster than the
+      // march assumed. Bisect the bracket to clean up vertical faces.
+      float lo = lastT;
+      float hi = t;
+      for (int k = 0; k < REFINE_STEPS; k++) {
+        float mid = 0.5 * (lo + hi);
+        vec3 mp = ro + rd * mid;
+        if (mp.y - terrainHeight(mp.xz, lodOctaves(mid)) < 0.0) hi = mid;
+        else lo = mid;
+      }
+      tHit = REFINE_STEPS > 0
+        ? hi
+        : lastT + (t - lastT) * lastGap / max(lastGap - gap, 1e-6);
       return true;
     }
     lastT = t;
@@ -515,7 +531,7 @@ vec4 cloudLayer(vec3 ro, vec3 rd, vec3 sd, float altitude, float scale, float co
   return vec4(col, clamp(density * uCloudDensity, 0.0, 1.0));
 }
 
-vec3 skyColor(vec3 rd, vec3 sd, bool withClouds) {
+vec3 skyColor(vec3 rd, vec3 sd, bool withClouds, float starGain) {
   float up = rd.y;
   float mu = clamp(dot(rd, sd), -1.0, 1.0);
   float sunUp = sd.y;
@@ -550,8 +566,8 @@ vec3 skyColor(vec3 rd, vec3 sd, bool withClouds) {
   float darkness = 1.0 - day;
   float clear = 1.0 - uCloudCover * 0.85;
   if (darkness > 0.02 && up > -0.02) {
-    col += vec3(0.85, 0.90, 1.0) * starField(rd) * darkness * darkness * 0.6 * clear;
-    col += auroraLayer(rd) * darkness * clear;
+    col += vec3(0.85, 0.90, 1.0) * starField(rd) * darkness * darkness * 0.6 * clear * starGain;
+    col += auroraLayer(rd) * darkness * clear * mix(0.35, 1.0, starGain);
   }
 
   if (withClouds) {
@@ -620,20 +636,20 @@ vec3 terrainAlbedo(vec3 p, vec3 n, float t) {
 
   vec3 col = rock * mix(0.82, 1.18, grain);
 
-  // Vegetation takes the ground below the snowline. Tropical forest climbs
-  // remarkably steep faces, so this reaches much further up a cliff than a
-  // temperate treeline would.
-  float veg = uVegetation * smoothstep(0.18, 0.58, slope) *
-              (1.0 - smoothstep(uSnowline * 0.75, uSnowline, hNorm)) *
-              smoothstep(0.015, 0.10, hNorm);
-  col = mix(col, mix(scrub, canopy, grain), clamp(veg, 0.0, 1.0));
-
-  // Beach: a band where the land meets the water, scaled to the island's own
-  // relief. An absolute width would swallow an atoll whole — its entire rim is
-  // lower than a volcanic island's beach.
+  // Beach first: a band where the land meets the water, scaled to the island's
+  // own relief. An absolute width would swallow an atoll whole — its entire rim
+  // is lower than a volcanic island's beach.
   float beachBand = 0.004 + uHeight * 0.055 + slope * uHeight * 0.05;
   float beach = (1.0 - smoothstep(0.002, beachBand, p.y)) * smoothstep(0.25, 0.7, slope);
   col = mix(col, sand, clamp(beach, 0.0, 1.0));
+
+  // Then vegetation over the top of it, because that is the order the world
+  // does it in: scrub and palms grow down onto the sand, and an atoll that is
+  // pure beach from rim to rim reads as a sandbar instead.
+  float veg = uVegetation * smoothstep(0.18, 0.58, slope) *
+              (1.0 - smoothstep(uSnowline * 0.75, uSnowline, hNorm)) *
+              smoothstep(0.004, 0.030 + uHeight * 0.05, p.y);
+  col = mix(col, mix(scrub, canopy, grain), clamp(veg, 0.0, 1.0));
 
   // Snow, with the line set by the live temperature. Steep faces shed it.
   float snowMask = smoothstep(uSnowline - 0.06, uSnowline + 0.05, hNorm) *
@@ -690,7 +706,10 @@ vec3 shadeWater(vec3 p, vec3 rd, vec3 waveN, float depth, vec3 sd) {
   vec3 refl = reflect(rd, n);
   refl.y = abs(refl.y) * 0.85 + 0.02;
 
-  vec3 reflected = skyColor(refl, sd, true);
+  // A star reflected in moving water lands on a sub-pixel facet and
+  // aliases into confetti. Damping it is cheaper and truer than
+  // supersampling the sky.
+  vec3 reflected = skyColor(refl, sd, true, 0.18);
 
   // Beer–Lambert through water: red dies first, which is the whole reason
   // shallow tropical water looks the way it does. The light makes the trip
@@ -720,7 +739,7 @@ vec3 shadeWater(vec3 p, vec3 rd, vec3 waveN, float depth, vec3 sd) {
 
   vec3 md = moonDirection(sd);
   vec3 mh = normalize(md - rd);
-  col += moonLight(sd) * pow(max(dot(n, mh), 0.0), 120.0) * 1.6;
+  col += moonLight(sd) * pow(max(dot(n, mh), 0.0), 40.0) * 0.5;
 
   // Foam: where the swell trips over the shallows, and on steep wave faces.
   // Keyed tightly to depth so a wide shelf does not read as a white halo.
@@ -736,7 +755,7 @@ vec3 shadeWater(vec3 p, vec3 rd, vec3 waveN, float depth, vec3 sd) {
 vec3 applyAtmosphere(vec3 col, vec3 rd, float dist, vec3 sd) {
   float density = 0.055 + uHaze * 0.13 + uFog * 0.85 + uRain * 0.09;
   float f = 1.0 - exp(-dist * density);
-  vec3 fogCol = skyColor(normalize(vec3(rd.x, max(rd.y, -0.03), rd.z)), sd, false);
+  vec3 fogCol = skyColor(normalize(vec3(rd.x, max(rd.y, -0.03), rd.z)), sd, false, 0.0);
   // Sun-facing fog glows; this is what makes rain look like weather and not
   // like a grey filter.
   float mu = max(dot(rd, sd), 0.0);
@@ -801,7 +820,7 @@ void main() {
     col = applyAtmosphere(far, rd, MAX_DIST * 2.5, sd);
     dist = 0.0;
   } else {
-    col = skyColor(rd, sd, true);
+    col = skyColor(rd, sd, true, 1.0);
     dist = 0.0;
   }
 

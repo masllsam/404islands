@@ -19,7 +19,7 @@
 import { createContext, drawFullscreen, Program, RenderTarget } from './gl.js';
 import { VERTEX_SHADER, SCENE_FRAGMENT } from './shaders/scene.glsl.js';
 import { PRESENT_FRAGMENT, ACCUMULATE_FRAGMENT } from './shaders/present.glsl.js';
-import { islandUniforms, sceneUniforms, orbitPosition } from './uniforms.js';
+import { islandUniforms, sceneUniforms, orbitPosition, exposureFor } from './uniforms.js';
 
 const IDLE_BEFORE_CONVERGE_MS = 420;
 const MAX_SAMPLES = 96;
@@ -462,7 +462,7 @@ export class IslandRenderer {
     present.set({
       uResolution: [width, height],
       uTime: performance.now() / 1000,
-      uExposure: 0.92,
+      uExposure: exposureFor(s),
       uRain: s.rain,
       uSnow: s.snow,
       uWindDir: s.windDir,
@@ -511,6 +511,12 @@ export class IslandRenderer {
     const savedTarget = this.sceneTarget;
     this.sceneTarget = scene; // so #sceneUniforms reports the export resolution
 
+    // The interactive loop must stand down: it renders on the same rAF this
+    // export yields to, and it would otherwise be drawing the live view at
+    // export resolution between every sample.
+    const wasRunning = this.running;
+    this.stop();
+
     try {
       let index = 0;
       for (let i = 0; i < samples; i++) {
@@ -557,6 +563,7 @@ export class IslandRenderer {
       accum[1].dispose();
       out.dispose();
       this.invalidate();
+      if (wasRunning) this.start();
     }
   }
 

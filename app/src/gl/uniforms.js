@@ -90,6 +90,20 @@ export function sceneUniforms({
 }
 
 /**
+ * Exposure, in stops rather than in taste.
+ *
+ * A night island lit correctly for a daylight exposure is a black rectangle.
+ * A photographer standing on that beach would open up several stops, and this
+ * renderer is already a long exposure, so it does the same. The scene is not
+ * being brightened — the shutter is being held open.
+ */
+export function exposureFor(scene, base = 0.92) {
+  // Squared, so twilight — which still has plenty of sky light — is barely
+  // touched and only genuine darkness opens the shutter wide.
+  return base * (1 + scene.night * scene.night * 1.7);
+}
+
+/**
  * How visible the aurora should be: a function of geomagnetic latitude and how
  * dark the sky is. Not a forecast — a plausibility. Islands above 60° see it
  * on a clear dark night, and that is the truthful amount of drama.
