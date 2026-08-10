@@ -280,6 +280,11 @@
 }
 @keyframes shimmer { to { transform: translateX(100%); } }
 
+/* No WebGL: the tiles will never fill, so nothing should pretend to be
+   loading. The text half of the atlas still works perfectly well. */
+.grid--static .tile__placeholder::after { display: none; }
+.grid--static .tile__body { background: linear-gradient(to top, rgba(4, 6, 9, 0.7), rgba(4, 6, 9, 0.35)); }
+
 .tile__body {
   position: absolute;
   inset: auto 0 0 0;

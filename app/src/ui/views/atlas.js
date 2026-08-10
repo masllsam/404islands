@@ -97,7 +97,9 @@ export function atlas(app) {
     );
 
     const count = h('div.filters__count');
-    const grid = h('div.grid', { role: 'list' });
+    const grid = h(`div.grid${app.thumbnails.supported ? '' : '.grid--static'}`, {
+      role: 'list',
+    });
     const empty = h('div.atlas__empty', { hidden: true });
 
     const filters = h(
@@ -135,6 +137,9 @@ export function atlas(app) {
 
     // ── Tile lifecycle ───────────────────────────────────────────────────
 
+    // `visible` is what the eye can see; `mounted` is what has a canvas. They
+    // differ when WebGL is missing, and the climate feed cares about the first.
+    const visible = new Set();
     const mounted = new Map();
 
     const observer = new IntersectionObserver(
@@ -142,8 +147,13 @@ export function atlas(app) {
         for (const entry of entries) {
           const tile = entry.target;
           const island = tile._island;
-          if (entry.isIntersecting) mount(tile, island);
-          else unmount(tile, island);
+          if (entry.isIntersecting) {
+            visible.add(island.number);
+            mount(tile, island);
+          } else {
+            visible.delete(island.number);
+            unmount(tile, island);
+          }
         }
       },
       // Start work a screen early so tiles are painted before they arrive.
@@ -152,6 +162,10 @@ export function atlas(app) {
     dispose(() => observer.disconnect());
 
     function mount(tile, island) {
+      // Without WebGL there is nothing to draw into. Leave the placeholder,
+      // but stop it shimmering — a loading animation that will never finish is
+      // worse than an honest blank.
+      if (!app.thumbnails.supported) return;
       if (mounted.has(island.number)) return;
       const canvas = h('canvas', { width: 384, height: 256, 'aria-hidden': 'true' });
       tile.insertBefore(canvas, tile.firstChild);
@@ -206,6 +220,7 @@ export function atlas(app) {
         .map((entry) => entry.island);
 
       observer.disconnect();
+      visible.clear();
       mounted.clear();
       clear(grid);
 
@@ -282,6 +297,7 @@ export function atlas(app) {
     // ── Wiring ───────────────────────────────────────────────────────────
 
     let debounce;
+    dispose(() => clearTimeout(debounce));
     dispose(
       on(search, 'input', () => {
         clearTimeout(debounce);
@@ -304,10 +320,10 @@ export function atlas(app) {
 
     // Fetch observations for what is on screen, in view order, in batches.
     const refreshVisible = () => {
-      const visible = [...mounted.keys()]
+      const islands = [...visible]
         .map((n) => app.atlas.byNumber.get(n))
         .filter(Boolean);
-      if (visible.length) app.refresh(visible.slice(0, 100));
+      if (islands.length) app.refresh(islands.slice(0, 100));
     };
     const refreshTimer = setInterval(refreshVisible, 4000);
     dispose(() => clearInterval(refreshTimer));
@@ -325,7 +341,9 @@ export function atlas(app) {
     dispose(() => app.removeEventListener('climate', onClimate));
 
     build();
-    setTimeout(refreshVisible, 250);
+    // A beat, so the observer has reported what is actually on screen.
+    const firstRefresh = setTimeout(refreshVisible, 250);
+    dispose(() => clearTimeout(firstRefresh));
 
     return dispose.dispose;
   };
