@@ -1,0 +1,10 @@
+# 404 Islands — a living atlas of the ocean.
+#
+# The catalogue and the writing are welcome to be indexed. The climate proxy
+# is not: every request through it costs a free upstream service something,
+# and a crawler walking 404 island pages would spend that for nobody's benefit.
+
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /dev/
