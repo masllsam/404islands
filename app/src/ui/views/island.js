@@ -15,6 +15,7 @@ import { haversineKm } from '../../core/geo.js';
 import { daylight } from '../../core/solar.js';
 import { Router } from '../router.js';
 import { notFound } from './notfound.js';
+import { processPanel, interiorPanel } from '../geology-panel.js';
 
 /** The three catalogued islands physically nearest this one. */
 function neighbours(app, island, limit = 3) {
@@ -113,6 +114,7 @@ export function islandView(app) {
     // ── Panel ────────────────────────────────────────────────────────────
 
     const instrumentsHost = h('div');
+    const geologyHost = h('div');
     const windHost = h('div', {
       style: { display: 'flex', alignItems: 'center', gap: '1rem', margin: '1.5rem 0' },
     });
@@ -170,6 +172,7 @@ export function islandView(app) {
         'ranges run from 0.1 m in the Mediterranean to 16 m in the Bay of Fundy, and ',
         'that depends on how each basin resonates.',
       ]),
+      geologyHost,
       h('div.label', { style: { marginTop: '2.5rem' } }, 'Nearest in the atlas'),
       h(
         'div.neighbours',
@@ -190,6 +193,7 @@ export function islandView(app) {
     function paint() {
       const readings = app.readingsFor(island);
       instrumentsHost.replaceChildren(instrumentPanel(island, readings));
+      geologyHost.replaceChildren(processPanel(island, readings), interiorPanel(island, readings));
       windHost.replaceChildren(
         compass(readings.windDirection, readings.windSpeed),
         h(

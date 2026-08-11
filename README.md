@@ -14,7 +14,7 @@ Stand still and the render keeps refining until it is clean enough to print.
 
 ```
 npm start          # http://localhost:8080
-npm test           # 101 tests, no dependencies
+npm test           # 142 tests, no dependencies
 node scripts/smoke.mjs   # browser checks (needs a global Playwright)
 ```
 
@@ -36,6 +36,9 @@ This distinction is the whole piece, so it is worth being precise about.
 | Snowline, wave amplitude, haze, water colour | Derived from the live values above |
 | Moon position, phase, illumination, moonlight | Computed locally from Meeus's lunar series |
 | Tide height, state, next high and low | Computed locally — equilibrium model, see below |
+| Gravity, Coriolis, isostatic root, air column | Computed locally — WGS84, Airy isostasy, ISA |
+| Interior density, pressure, gravity to the centre | Integrated locally from PREM |
+| Uplift, subsidence, erosion and reef rates | Computed locally from published rate laws |
 
 When the feed cannot be reached, the atlas does not freeze and it does not
 pretend. It falls back to a physical climate model — seasonal temperature by
@@ -74,6 +77,61 @@ The atlas grid uses a second, shared context that renders a queue of tiles on a
 per-frame budget and blits each into the tile's own canvas. Only visible tiles
 own a surface, so scrolling all 404 never holds more than a couple of dozen.
 
+## What is under the waterline
+
+The atmosphere and the ocean were measured; below them there was nothing, and
+the islands floated on an abstraction. Two modules fix that.
+
+**The planet.** `core/interior.js` carries the PREM density profile
+(Dziewonski & Anderson, 1981) and integrates everything else from it — mass by
+shells, gravity by the shell theorem, pressure by hydrostatic equilibrium.
+Nothing but density is tabulated, so the published numbers are predictions of
+the code rather than constants copied into it, and the tests check them:
+
+| | integrated here | measured |
+|---|---|---|
+| Mass of the Earth | 5.9733 × 10²⁴ kg | 5.9722 × 10²⁴ kg |
+| Mean density | 5514 kg/m³ | 5513 kg/m³ |
+| Moment of inertia factor I/MR² | 0.3308 | 0.3307 |
+| Pressure at the core–mantle boundary | 135.8 GPa | ~136 GPa |
+| Pressure at the inner core boundary | 329.1 GPa | ~329 GPa |
+| Pressure at the centre | 364.1 GPa | ~364 GPa |
+
+Gravity peaks at 10.7 m/s² near the core–mantle boundary rather than at the
+surface, which falls out of the integration rather than being put in. The
+atmosphere contributes its 1 bar and is three parts in ten million of the
+central pressure — carried anyway, so nobody has to wonder whether it was
+left out.
+
+**The island's own ground.** `core/geodesy.js` gives WGS84 normal gravity at
+each island's latitude, the free-air drop to its summit, its Airy isostatic
+root, the pressure beneath it, its Coriolis parameter and inertial period, and
+an air column driven by the *live* sea-level pressure — including the
+temperature at which water boils on the summit.
+
+## How mountains are made
+
+Fractal noise is not how mountains form, so the process is modelled separately
+and stated as rates in `core/geology.js`. Four things compete:
+
+- **Volcanism** builds, while the island is still over its magma source.
+- **Subsidence** sinks it, as the plate cools and densifies —
+  Parsons & Sclater's 2500 + 350·√t metres.
+- **Erosion** takes it apart, at a rate driven by the rainfall *actually
+  falling on it now*: a wet island is being dismantled measurably faster than a
+  dry one.
+- **Reef accretion** races the subsidence at the waterline.
+
+That last one is Darwin's mechanism, and it is why the archetypes in this atlas
+are not seven unrelated categories: coral builds upward an order of magnitude
+faster than the plate sinks, so a fringing reef becomes a barrier reef becomes
+an atoll — one volcano, sinking slowly enough for the coral to keep up. Cold
+water has no coral, and so no atolls, only erosion and then a drowned seamount.
+
+Reef growth is deliberately **not** added to the island's height: coral grows
+to sea level and stops, so it cannot lift a summit. It is shown as a race
+against subsidence instead.
+
 ## Seven forms of land
 
 Terrain is not one formula with the knobs turned. Each island belongs to an
@@ -99,7 +157,8 @@ app/                  the artwork — static, no build
   index.html
   styles/             base.css (tokens, type, components), views.css
   src/
-    core/             rng, geography, archetypes, names, catalogue, solar
+    core/             rng, geography, archetypes, names, catalogue, solar,
+                      lunar, tide, interior (PREM), geodesy, geology
     climate/          live feed, modelled fallback, derivation to uniforms
     gl/               context, renderer, thumbnail factory, shaders
     ui/               router, views, components, formatting
