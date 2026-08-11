@@ -669,7 +669,12 @@ vec3 moonLight(vec3 sd) {
   // Moonlight is reflected sunlight, so it carries a little of the sun's warmth
   // under a very cool sky; the blue of a moonlit night is the sky, not the moon.
   float night = 1.0 - smoothstep(-0.16, 0.10, sd.y);
-  return vec3(0.42, 0.50, 0.72) * uMoonLight * night * 2.6;
+  // Real moonlight is about one four-hundred-thousandth of sunlight. This is
+  // nothing like that far down — it is a long exposure — but it must stay well
+  // under the sun (2.85) or a full moon renders brighter than noon, which is
+  // exactly what happened at 2.6. The night exposure lift multiplies this
+  // again, so the number here is deliberately small.
+  return vec3(0.40, 0.48, 0.72) * uMoonLight * night * 0.34;
 }
 
 vec3 skyLight(vec3 sd) {
@@ -803,7 +808,7 @@ vec3 shadeWater(vec3 p, vec3 rd, vec3 waveN, float depth, vec3 sd) {
 
   vec3 md = moonDirection(sd);
   vec3 mh = normalize(md - rd);
-  col += moonLight(sd) * pow(max(dot(n, mh), 0.0), 40.0) * 0.5;
+  col += moonLight(sd) * pow(max(dot(n, mh), 0.0), 40.0) * 2.2;
 
   // Foam: where the swell trips over the shallows, and on steep wave faces.
   // Keyed tightly to depth so a wide shelf does not read as a white halo.
