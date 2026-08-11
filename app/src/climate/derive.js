@@ -8,6 +8,8 @@
  */
 
 import { sunDirection, sunPosition, daylight } from '../core/solar.js';
+import { moonDirection, moonPosition, moonlight, lunarPhase } from '../core/lunar.js';
+import { tideState, nextTurns } from '../core/tide.js';
 
 /** WMO 4677 present-weather codes, as Open-Meteo emits them. */
 export const WEATHER_CODES = {
@@ -159,8 +161,24 @@ export function deriveScene(island, climate, date = new Date()) {
   const twilight = 1 - smoothstep(-8, 4, sun.apparentElevation);
   const night = 1 - smoothstep(-6, 1.5, sun.apparentElevation);
 
+  // The moon, computed rather than invented. Cloud puts it out the same way
+  // it puts the stars out.
+  const moonDir = moonDirection(island.lat, island.lon, date);
+  const phase = lunarPhase(date);
+  const moonLight = moonlight(island.lat, island.lon, date) * (1 - cloud * 0.75);
+
+  // The tide moves the waterline. One world unit is ~900 m of island, so a
+  // half-metre tide would be invisible at true scale; this is the same
+  // deliberate exaggeration the waves already use, applied consistently.
+  const tide = tideState(island.lat, island.lon, date);
+  const seaLevel = tide.height * 0.012;
+
   return {
     sunDir,
+    moonDir,
+    moonLight,
+    moonPhase: phase.illumination,
+    seaLevel,
     sunElevation: sun.apparentElevation,
     sunAzimuth: sun.azimuth,
     night,
@@ -202,7 +220,32 @@ export function readouts(island, climate, date = new Date()) {
   const wind = beaufort(climate.windSpeed);
   const sea = seaState(climate.waveHeight);
 
+  const moon = moonPosition(island.lat, island.lon, date);
+  const phase = lunarPhase(date);
+  const tide = tideState(island.lat, island.lon, date);
+  const turns = nextTurns(island.lat, island.lon, date);
+
   return {
+    moon: {
+      phase: phase.name,
+      illumination: phase.illumination,
+      age: phase.age,
+      waxing: phase.waxing,
+      altitude: moon.altitude,
+      azimuth: moon.azimuth,
+      distanceKm: moon.distance,
+      up: moon.altitude > 0,
+    },
+    tide: {
+      height: tide.height,
+      rate: tide.rate,
+      phase: tide.phase,
+      flooding: tide.flooding,
+      nextHigh: turns.high ? turns.high.at : null,
+      nextLow: turns.low ? turns.low.at : null,
+      // Never an observation, and the panel says so.
+      source: tide.source,
+    },
     condition: describeWeather(climate.weatherCode),
     temperature: climate.temperature,
     apparent: climate.apparentTemperature,

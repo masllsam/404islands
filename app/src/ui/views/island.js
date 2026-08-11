@@ -162,6 +162,14 @@ export function islandView(app) {
             : `${fmt.clockFromMinutes(light.sunrise, island.lon)} – ${fmt.clockFromMinutes(light.sunset, island.lon)} local`),
         h('dt', 'Singularity'), h('dd', `${Math.round(island.singularity * 100)} of 100`)
       ),
+      h('div.notice', { style: { fontSize: '0.8rem' } }, [
+        h('strong', 'On the tide. '),
+        'The rhythm is astronomy: high water follows the moon\u2019s transit, springs ',
+        'fall at new and full moon, neaps at the quarters. The range is not — this is ',
+        'the equilibrium tide, the forcing rather than a local prediction. Real ',
+        'ranges run from 0.1 m in the Mediterranean to 16 m in the Bay of Fundy, and ',
+        'that depends on how each basin resonates.',
+      ]),
       h('div.label', { style: { marginTop: '2.5rem' } }, 'Nearest in the atlas'),
       h(
         'div.neighbours',

@@ -104,8 +104,36 @@ export function instrumentPanel(island, readings) {
     instrument('Sun', `${fmt.num(readings.sunElevation, 1)}°`,
       readings.sunElevation > 0 ? `bearing ${fmt.degrees(readings.sunAzimuth)}` : 'below horizon'),
     instrument('Local time', fmt.solarClock(island.lon), 'apparent solar'),
-    instrument('Daylight', dayLabel, 'today')
+    instrument('Daylight', dayLabel, 'today'),
+    instrument(
+      'Moon',
+      `${Math.round(readings.moon.illumination * 100)}%`,
+      readings.moon.phase.toLowerCase()
+    ),
+    instrument(
+      'Moon altitude',
+      `${fmt.num(readings.moon.altitude, 0)}°`,
+      readings.moon.up ? `bearing ${fmt.degrees(readings.moon.azimuth)}` : 'below horizon'
+    ),
+    instrument(
+      'Tide',
+      `${readings.tide.height >= 0 ? '+' : ''}${fmt.num(readings.tide.height, 2)} m`,
+      readings.tide.phase.toLowerCase()
+    ),
+    instrument(
+      readings.tide.flooding ? 'Next high' : 'Next low',
+      readings.tide.flooding
+        ? fmt.clockFromMinutes(minutesOfDay(readings.tide.nextHigh), island.lon)
+        : fmt.clockFromMinutes(minutesOfDay(readings.tide.nextLow), island.lon),
+      'equilibrium, modelled'
+    )
   );
+}
+
+/** Epoch millis to minutes past UTC midnight, for the clock formatter. */
+function minutesOfDay(timestamp) {
+  if (!timestamp) return null;
+  return ((timestamp / 60000) % 1440 + 1440) % 1440;
 }
 
 /** The card that names whichever island the overture is currently showing. */

@@ -78,6 +78,10 @@ uniform float uWaveChop;
 uniform float uWavePeriod;
 uniform float uWaterWarmth;
 uniform float uAurora;
+uniform vec3  uMoonDir;    // real lunar position for this coordinate and hour
+uniform float uMoonLight;  // 0..1, lit fraction x altitude x distance x cloud
+uniform float uMoonPhase;  // illuminated fraction of the disc
+uniform float uSeaLevel;   // tide, in world units, about mean sea level
 
 #define PI  3.14159265359
 #define TAU 6.28318530718
@@ -564,9 +568,49 @@ vec3 skyColor(vec3 rd, vec3 sd, bool withClouds, float starGain) {
   col += haloTint * halo * (0.20 + dusk * 1.5);
   col += haloTint * pow(max(mu, 0.0), 1.8) * 0.05 * day;
 
-  // The disc itself.
+  // The sun's disc.
   float disc = smoothstep(0.99965, 0.99988, mu) * step(-0.03, sunUp);
   col += mix(vec3(2.4, 1.1, 0.45), vec3(6.0, 5.7, 5.2), day) * disc;
+
+  // The moon's disc, at its real place in the sky and in its real phase.
+  // Both bodies subtend about half a degree, which is the one coincidence in
+  // the solar system everybody has noticed.
+  if (uMoonDir.y > -0.05) {
+    float mmu = dot(rd, uMoonDir);
+    const float MOON_RADIUS = 0.00465; // radians
+    if (mmu > 0.99995) {
+      // Position within the disc, in units of its radius.
+      vec3 perp = rd - uMoonDir * mmu;
+      vec3 sunward = normalize(sd - uMoonDir * dot(sd, uMoonDir) + vec3(1e-6));
+      vec3 sideward = cross(uMoonDir, sunward);
+      float a = dot(perp, sunward) / MOON_RADIUS;
+      float b = dot(perp, sideward) / MOON_RADIUS;
+      float r2 = a * a + b * b;
+
+      if (r2 < 1.0) {
+        // The terminator is an ellipse, not a straight edge: its semi-axis
+        // along the sunward direction is cos of the phase angle. At export
+        // size a crescent is thirty pixels across, so this is visible.
+        float k = 2.0 * uMoonPhase - 1.0;
+        float edge = -k * sqrt(max(0.0, 1.0 - b * b));
+        float lit = smoothstep(edge - 0.09, edge + 0.09, a);
+        float limb = 1.0 - smoothstep(0.86, 1.0, sqrt(r2));
+
+        // Limb darkening, and the faint earthshine that makes the unlit part
+        // of a young moon visible against a dark sky.
+        float shade = 0.35 + 0.65 * sqrt(max(0.0, 1.0 - r2));
+        float earthshine = 0.035 * (1.0 - uMoonPhase);
+        float brightness = (lit * shade + earthshine) * limb;
+
+        // Bright against a night sky, washed out in daylight — as it is.
+        col += vec3(1.05, 1.02, 0.94) * brightness * mix(2.6, 0.85, day)
+             * (1.0 - uCloudCover * 0.85);
+      }
+    }
+    // A soft halo, so the moon reads as a light source rather than a sticker.
+    col += vec3(0.7, 0.76, 0.95) * pow(max(mmu, 0.0), 900.0)
+         * uMoonLight * 0.5 * (1.0 - day);
+  }
 
   // Stars and aurora, only where the sky is dark enough to hold them.
   float darkness = 1.0 - day;
@@ -606,20 +650,26 @@ vec3 sunLight(vec3 sd) {
 }
 
 /**
- * A full moon, in opposition. Not astronomically placed — the moon's phase and
- * position are not in the data feed and inventing them would be a lie dressed
- * as precision. What this is instead is the honest photographic answer: a night
- * exposure long enough to see by. Without it every island past sunset is a
- * black cut-out, which is true to the physics and false to the experience.
+ * The moon, where the moon actually is.
+ *
+ * Direction, phase and brightness all arrive as uniforms from real lunar
+ * astronomy computed for this island's coordinate and this instant — see
+ * core/lunar.js. So a crescent gives less light than a gibbous, a moon near
+ * the horizon is dimmed by the same atmosphere that reddens a sunset, and on
+ * a new moon the island is genuinely dark.
+ *
+ * The exposure still opens up at night, because this render is a long one.
+ * That is a photographic choice, not an invented light source.
  */
 vec3 moonDirection(vec3 sd) {
-  return normalize(vec3(-sd.x, max(0.30, -sd.y * 0.85 + 0.22), -sd.z));
+  return uMoonDir;
 }
 
 vec3 moonLight(vec3 sd) {
-  float night = 1.0 - smoothstep(-0.16, 0.08, sd.y);
-  // Cloud puts the moon out, the same way it puts the stars out.
-  return vec3(0.34, 0.44, 0.68) * night * 1.55 * (1.0 - uCloudCover * 0.7);
+  // Moonlight is reflected sunlight, so it carries a little of the sun's warmth
+  // under a very cool sky; the blue of a moonlit night is the sky, not the moon.
+  float night = 1.0 - smoothstep(-0.16, 0.10, sd.y);
+  return vec3(0.42, 0.50, 0.72) * uMoonLight * night * 2.6;
 }
 
 vec3 skyLight(vec3 sd) {
@@ -645,16 +695,24 @@ vec3 terrainAlbedo(vec3 p, vec3 n, float t) {
   // Beach first: a band where the land meets the water, scaled to the island's
   // own relief. An absolute width would swallow an atoll whole — its entire rim
   // is lower than a volcanic island's beach.
+  // Measured from the current waterline: at low water the exposed strip of
+  // wet sand widens, which is the whole visual point of having a tide.
+  float above = p.y - uSeaLevel;
   float beachBand = 0.004 + uHeight * 0.055 + slope * uHeight * 0.05;
-  float beach = (1.0 - smoothstep(0.002, beachBand, p.y)) * smoothstep(0.25, 0.7, slope);
+  float beach = (1.0 - smoothstep(0.002, beachBand, above)) * smoothstep(0.25, 0.7, slope);
   col = mix(col, sand, clamp(beach, 0.0, 1.0));
+
+  // The intertidal zone: ground the sea has covered recently is darker and
+  // still wet. This is the band that appears and disappears twice a day.
+  float wet = (1.0 - smoothstep(0.0, 0.006 + uHeight * 0.02, above)) * step(0.0, above);
+  col *= 1.0 - wet * 0.35;
 
   // Then vegetation over the top of it, because that is the order the world
   // does it in: scrub and palms grow down onto the sand, and an atoll that is
   // pure beach from rim to rim reads as a sandbar instead.
   float veg = uVegetation * smoothstep(0.18, 0.58, slope) *
               (1.0 - smoothstep(uSnowline * 0.75, uSnowline, hNorm)) *
-              smoothstep(0.004, 0.030 + uHeight * 0.05, p.y);
+              smoothstep(0.004, 0.030 + uHeight * 0.05, above);
   col = mix(col, mix(scrub, canopy, grain), clamp(veg, 0.0, 1.0));
 
   // Snow, with the line set by the live temperature. Steep faces shed it.
@@ -793,13 +851,15 @@ void main() {
   bool hitWater = false;
   float tWater = 0.0;
   vec3 waterN = vec3(0.0, 1.0, 0.0);
-  if (rd.y < -0.0005 && ro.y > 0.0) {
-    tWater = -ro.y / rd.y;
+  // The sea surface sits at the tide, which is why a low island can gain and
+  // lose a startling amount of beach over six hours.
+  if (rd.y < -0.0005 && ro.y > uSeaLevel) {
+    tWater = (uSeaLevel - ro.y) / rd.y;
     if (tWater < MAX_DIST && (!hitTerrain || tWater < tTerrain)) {
       for (int i = 0; i < 3; i++) {
         vec3 wp = ro + rd * tWater;
         vec3 wf = waveField(wp.xz, 1.0);
-        tWater += (wf.x - wp.y) / rd.y;
+        tWater += (wf.x + uSeaLevel - wp.y) / rd.y;
       }
       vec3 wp = ro + rd * tWater;
       float detail = 1.0 / (1.0 + tWater * tWater * 0.055);
@@ -812,13 +872,13 @@ void main() {
   if (hitWater) {
     vec3 p = ro + rd * tWater;
     float bed = terrainHeight(p.xz, lodOctaves(tWater));
-    col = shadeWater(p, rd, waterN, -bed, sd);
+    col = shadeWater(p, rd, waterN, uSeaLevel - bed, sd);
     dist = tWater;
   } else if (hitTerrain) {
     vec3 p = ro + rd * tTerrain;
     col = shadeTerrain(p, rd, tTerrain, sd);
     dist = tTerrain;
-  } else if (rd.y < -0.0005 && ro.y > 0.0) {
+  } else if (rd.y < -0.0005 && ro.y > uSeaLevel) {
     // Open sea beyond the marching horizon. Shading it as fully-attenuated
     // deep water means it meets the sky exactly where the haze says it should,
     // with no seam where the march gave up.

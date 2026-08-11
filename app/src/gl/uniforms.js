@@ -54,6 +54,10 @@ export function climateUniforms(scene) {
     uSnowline: scene.snowline,
     uVegetation: scene.vegetation,
     uAurora: scene.aurora || 0,
+    uMoonDir: scene.moonDir,
+    uMoonLight: scene.moonLight,
+    uMoonPhase: scene.moonPhase,
+    uSeaLevel: scene.seaLevel,
   };
 }
 

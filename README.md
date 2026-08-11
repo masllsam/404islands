@@ -14,7 +14,7 @@ Stand still and the render keeps refining until it is clean enough to print.
 
 ```
 npm start          # http://localhost:8080
-npm test           # 81 tests, no dependencies
+npm test           # 101 tests, no dependencies
 node scripts/smoke.mjs   # browser checks (needs a global Playwright)
 ```
 
@@ -34,7 +34,8 @@ This distinction is the whole piece, so it is worth being precise about.
 | Wave height, period, sea surface temperature | Live, from the Open-Meteo marine API |
 | Sun elevation and azimuth, sunrise, day length | Computed locally from the NOAA solar equations |
 | Snowline, wave amplitude, haze, water colour | Derived from the live values above |
-| Moonlight | **Invented.** See "Honest seams" below. |
+| Moon position, phase, illumination, moonlight | Computed locally from Meeus's lunar series |
+| Tide height, state, next high and low | Computed locally — equilibrium model, see below |
 
 When the feed cannot be reached, the atlas does not freeze and it does not
 pretend. It falls back to a physical climate model — seasonal temperature by
@@ -163,12 +164,20 @@ POST /api/reserve                    { island, tier, email, note }
 
 Things this project could have faked and deliberately does not:
 
-- **Moonlight is invented.** Lunar phase and position are not in the feed, and
-  computing them precisely to light a scene nobody can verify would be
-  precision theatre. Instead there is a full moon in opposition — the honest
-  photographic answer to a night exposure. Without it every island past sunset
-  is a black cut-out: true to the physics, false to the experience. It is
-  labelled as invented here and in the shader source.
+- **The tide's rhythm is real; its range is a model.** What the atlas computes
+  is the *equilibrium tide* — the shape the ocean would take if water answered
+  gravity instantly with no continents in the way. The timing is genuine: high
+  water follows the moon's transit, springs fall at new and full moon, neaps at
+  the quarters, and the fortnightly beat between them is exact. The range is
+  not: equilibrium theory gives about 0.8 m everywhere, while the real ocean
+  answers with 0.1 m in the Mediterranean and 16 m in the Bay of Fundy
+  depending on how each basin resonates. Predicting that needs harmonic
+  constituents measured at each port, which no free global API provides. The
+  island page says all of this in plain words, next to the number.
+- **Night exposure is a photographic choice.** Moonlight is now computed from
+  the moon's real position, phase and distance — a new moon leaves an island
+  genuinely dark — but the renderer still opens the shutter several stops after
+  sunset, because it is a long exposure and that is what a long exposure does.
 - **No manufactured scarcity.** Nothing counts down. Nothing claims three are
   left.
 - **No fake checkout.** The reservation form records an intent and says, on the
