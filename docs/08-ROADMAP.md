@@ -1,0 +1,136 @@
+# 08 — Roadmap
+
+**Rule:** every milestone ends with something you can watch, and something you can check.
+No milestone is "infrastructure only".
+
+---
+
+## Milestone 1 — The kernel exists and is honest ✅ *(this commit)*
+
+- [x] Deterministic substrate: `kmath` (own transcendentals), counter-based RNG, compensated
+      reductions, conservation ledger.
+- [x] Geosphere: hotspot supply → chamber pressure → eruption; Bingham flow emplacement;
+      spectral flexure; half-space cooling subsidence; implicit stream-power incision;
+      nonlinear hillslopes; soil production; landslides; reef accretion with the Darwin
+      classification.
+- [x] Atmosphere: orbital insolation from Kepler; Clausius–Clapeyron; Smith–Barstad
+      orographic precipitation with LCL and Froude blocking; slab ocean with bulk latent
+      and sensible fluxes.
+- [x] Hydrosphere: soil water with Clapp–Hornberger retention; Ghyben–Herzberg lens;
+      routing on the D8 network.
+- [x] Biosphere: Farquhar photosynthesis, Medlyn stomata, trait-based lineages on the leaf
+      economics spectrum, CENTURY-style soil carbon, N and P with weathering-limited P.
+- [x] Evosphere: quantitative genetics with emergent selection gradients, drift scaled by
+      Nₑ, founder effects, Dobzhansky–Muller speciation, the chronicle.
+- [x] Ports: StateFrame with canonical serialisation and hash chaining; Kinetic Score
+      loader with the Motion Envelope; terminal renderer; CLI.
+- [x] **All four conservation budgets close to ~1e-17 relative.**
+- [x] Emergent tests passing that were never fitted: Hack's law h = 0.507 (published 0.57),
+      slope–area concavity θ = 0.471 (published 0.4–0.6), orographic ratio 29×, TOA
+      insolation balance to < 3 W/m², SST within observed zonal means at four latitudes,
+      seasonal range monotonic in latitude, tropical LAI and NPP in observed ranges.
+
+**Known-open at Milestone 1, stated plainly:**
+
+- The land-surface energy budget is not closed (only the ocean's is). The ledger reports
+  this rather than pretending otherwise.
+- `WET_FRACTION` in `orographic.py` is the one tuned scalar in the atmosphere; the ocean's
+  `transport_w_m2` is the one tuned scalar in the ocean. Both are isolated and labelled.
+- Demes are a block partition, not a least-cost partition over real topography.
+- Consumers, fire spread, and the marine ecosystem are specified but not implemented.
+- The reference kernel runs ~1.8 s per island-year at 96². The Heart needs < 3 s at 128²
+  in Rust — plausible but unproven.
+
+## Milestone 2 — Fidelity
+
+- [ ] Close the land-surface energy budget: per-cell radiation on real terrain with cast
+      shadows, Newton-solved skin temperature, Monin–Obukhov stability corrections.
+- [ ] Multi-rate coupler proper: `T_FAST` weather stepping instead of annual climatology,
+      so the piece has weather to show at the minute scale.
+- [ ] Diurnal sea breeze and the afternoon summit convergence cloud — the daily event the
+      object shows every simulated afternoon.
+- [ ] Least-cost-path deme partition over real topography, so a newly-cut canyon physically
+      isolates two populations.
+- [ ] Individual-based genetics below Nₑ = 500 (currently analytic everywhere).
+- [ ] Consumers and the trophic web with metabolic scaling.
+- [ ] Rothermel fire spread; cyclone tracks rather than uniform passage.
+- [ ] Eustatic sea level from the orbital solution; wave-cut terraces.
+- [ ] **Gate:** all of `docs/03f` passing, including the species–area relationship and
+      Vitousek retrogression, which need Milestone-2 machinery to test at all.
+
+## Milestone 3 — The runtime
+
+- [ ] Rust `no_std`-capable port reproducing the reference golden vectors bit-for-bit.
+- [ ] Cross-architecture determinism gate (x86-64 vs aarch64), 10,000 sim-years.
+- [ ] Checkpointing with triple redundancy; power-loss injection, 10,000 trials, zero
+      corrupted islands.
+- [ ] Performance envelope met on target silicon (`docs/02` §11).
+- [ ] Soak: 1,000 islands × 1,000 years; 10 islands × 100,000 years for the full Darwin
+      sequence.
+
+## Milestone 4 — The object
+
+- [ ] Heart module: schematic, layout, mechanical datum, connector, thermal path.
+- [ ] Motion controller firmware implementing the Motion Envelope and the wire protocol.
+- [ ] Actuator selection and qualification: silence, backlash, hold-without-power, 10⁸-cycle
+      flexure life.
+- [ ] LED spectral calibration and lifetime buy; binning across the edition.
+- [ ] `subsidence.index` mechanism — millimetres per decade, readable with a loupe.
+- [ ] Relief carving pipeline: StateFrame → 5-axis toolpath → alumina and gold.
+- [ ] Enamel trials: plique-à-jour over the light guides, thermal-shock qualification.
+- [ ] Oddy tests for every material in the sealed volume. No exceptions.
+- [ ] Mechanical, unpowered element (`docs/01` §6).
+
+## Milestone 5 — The edition
+
+- [ ] Studio seed search: ≥ 10⁶ candidates characterised on the descriptor vector.
+- [ ] Curation to 404, with published rarity statistics and per-piece curatorial statements.
+- [ ] Kernel specification frozen, hashed, printed on cotton rag, deposited.
+- [ ] Escrow: spare Hearts, matched LED reels, fabrication files, toolchain containers,
+      test vectors, with an independent trust.
+- [ ] Certificate folio design and production.
+- [ ] Ignition protocol, witnesses, seed commitment.
+- [ ] The one exhibition — all 404 in a room, running, photographed properly.
+
+---
+
+## How to pick up work
+
+Milestones are ordered but not serial. Independent tracks that can start now:
+
+| Track | Depends on | Where |
+|---|---|---|
+| Land-surface energy closure | nothing | `kernel/atmos/energy.py` |
+| Consumers / trophic web | nothing | new `kernel/bio/consumers.py` |
+| Fire spread | nothing | new `kernel/bio/fire.py` |
+| Least-cost demes | nothing | `kernel/evo/genetics.py::region_map` |
+| Rust port | frozen `docs/04` | new `runtime/` |
+| Studio seed search | nothing | `studio/` |
+| Hardware | frozen `docs/05` | `hardware/` |
+
+See `AGENTS.md` for the conventions any contributor — human or agent — must follow.
+
+---
+
+## Measured, not assumed
+
+Numbers from the Milestone-1 kernel, recorded here so regressions are visible.
+
+| Quantity | Measured | Published / expected |
+|---|---|---|
+| Hack's law exponent | **0.507** | 0.57 |
+| Slope–area concavity θ | **0.471** | 0.4–0.6 |
+| Windward:leeward rainfall, Kauai-scale island | **29×** | 5–40× |
+| Summit rainfall, 1600 m island | **9,840 mm/yr** | ~11,000 (Waialeale) |
+| Global mean TOA insolation | **340.2 W/m²** | 340.25 (S₀/4) |
+| SST, equator / 20° / 40° / 60° | **29.0 / 25.3 / 15.6 / 1.4 °C** | observed zonal means |
+| Seasonal SST range | monotonic 0.5 → 6.6 K with latitude | maritime seasonality |
+| Tropical LAI | **5.4** | 4–8 |
+| Tropical NPP | **1.07 kg C m⁻² yr⁻¹** | 0.8–1.5 |
+| Energy / water / carbon budget residual | **~1e-17 relative** | ≤ 1e-9 required |
+| Reference kernel speed | 1.8 s per island-year at 96² | Rust target < 3 s at 128² |
+
+**A finding worth recording:** at 15 km domains with 200 kyr of construction, roughly half
+of all seeds never break the surface at all — they stay guyots. Emergence is not the
+default. That is the honest basis for the edition's rarity claims (`docs/07` §2.1), and it
+is why curation runs over millions rather than hundreds.

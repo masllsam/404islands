@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.egg-info/
+.venv/
+venv/
+*.json.out
+/out/
+
+# Never commit credentials (see note in docs/00 about the archived legacy .env)
+.env
+!*.env.example

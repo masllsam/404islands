@@ -1,0 +1,28 @@
+name: kernel
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  gates:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install numpy pytest
+
+      # Fast gates: accuracy of kmath, determinism of replay, no libm, no hash().
+      - name: substrate and determinism
+        run: python -m pytest tests/substrate tests/determinism -q
+
+      # The ledger must close under strict mode, where any residual raises.
+      - name: conservation ledger (strict)
+        run: python -m kernel.cli --years 8 --grid 48 --cell 380 --genesis 200000 --strict --quiet
+
+      # The laws the island was never taught (docs/03f).  Slow; still a gate.
+      - name: emergent laws
+        run: python -m pytest tests/emergent -q

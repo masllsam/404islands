@@ -1,0 +1,235 @@
+#  Kinetic Score  --  "Vitrine No.1, Plique-a-jour"
+#
+#  Art direction for the table-mounted format.  Read docs/05-KINETIC-SCORE.md
+#  before editing: the rate limits here are aesthetic decisions with mechanical
+#  consequences, not defaults.
+#
+#  Principle: nothing moves faster than nature.  If a viewer can see a channel
+#  seek its target, the number is wrong.
+
+schema = "KS/1"
+score  = "Vitrine No.1 - Plique-a-jour"
+piece  = "table"
+author = "studio"
+version = 1
+
+# ---------------------------------------------------------------- light (A)
+# Priority A channels are never omitted, on any hardware, in any century.
+
+[channel."sun.intensity"]
+driver   = "pwm16"
+address  = "led0:ch0"
+source   = "sky_luminance"
+transfer = "perceptual_L"
+domain   = [0.0, 1.0]
+range    = [0.0, 1.0]
+max_rate = 0.12          # a full dawn takes ~8 s of real time, never a snap
+max_accel = 0.05
+deadband = 0.002
+priority = "A"
+
+[channel."sun.cct"]
+driver   = "dual_white"
+address  = "led0:ch1"
+source   = "sky_colour_temp_k"
+transfer = "linear"
+domain   = [1800.0, 6500.0]   # horizon red through zenith blue-white
+range    = [0.0, 1.0]
+max_rate = 0.08
+max_accel = 0.03
+deadband = 0.003
+priority = "A"
+
+[channel."sun.elevation"]
+driver   = "gimbal"
+address  = "motion0:m0"
+source   = "sun_elevation_deg"
+transfer = "linear"
+domain   = [-18.0, 90.0]
+range    = [0.0, 1.0]
+max_rate = 0.02          # the shadow crossing the relief is the best thing here
+max_accel = 0.008
+deadband = 0.001
+priority = "A"
+
+[channel."sun.azimuth"]
+driver   = "gimbal"
+address  = "motion0:m1"
+source   = "sun_azimuth_deg"
+transfer = "linear_wrap"
+domain   = [0.0, 360.0]
+range    = [0.0, 1.0]
+max_rate = 0.02
+max_accel = 0.008
+deadband = 0.001
+priority = "A"
+
+[channel."sky.diffuse"]
+driver   = "rgbw"
+address  = "led0:ch2"
+source   = "cloud_frac"
+transfer = "smoothstep"
+domain   = [0.0, 1.0]
+range    = [0.0, 1.0]
+max_rate = 0.05
+max_accel = 0.02
+deadband = 0.004
+priority = "A"
+
+[channel."moon.intensity"]
+driver   = "pwm16"
+address  = "led1:ch0"
+source   = "moon_elevation_deg"
+transfer = "smoothstep"
+domain   = [0.0, 60.0]
+range    = [0.0, 0.06]   # nights must be genuinely dark
+max_rate = 0.01
+max_accel = 0.004
+deadband = 0.0005
+priority = "A"
+
+[channel."canopy.glow"]
+driver   = "rgb"
+address  = "led1:ch1"
+source   = "canopy_greenness"
+transfer = "gamma"
+domain   = [0.0, 1.0]
+range    = [0.0, 1.0]
+max_rate = 0.004         # vegetation changes over seasons, not seconds
+max_accel = 0.001
+deadband = 0.004
+priority = "A"
+
+[channel."lava.glow"]
+driver   = "rgb"
+address  = "led1:ch2"
+source   = "fire_activity"
+transfer = "gamma"
+domain   = [0.0, 1.0]
+range    = [0.0, 1.0]
+max_rate = 0.25          # the one channel allowed to be sudden
+max_accel = 0.15
+deadband = 0.002
+priority = "A"
+
+[channel."chronicle.marker"]
+driver   = "rgb"
+address  = "led1:ch4"
+source   = "event_flags"
+trigger  = ["speciation", "extinction", "colonisation", "reef_stage_change"]
+range    = [0.0, 1.0]
+max_rate = 0.04
+max_accel = 0.02
+priority = "A"
+
+[channel."chronicle.marker".colour]
+speciation       = "#8FBF5A"
+extinction       = "#6E3B4E"
+colonisation     = "#E8D9A0"
+reef_stage_change = "#9FD3C7"
+
+# ---------------------------------------------------------------- motion (B)
+
+[channel."tide.ring"]
+driver     = "stepper"
+address    = "motion0:m2"
+source     = "tide_phase"
+transfer   = "linear_wrap"
+domain     = [0.0, 1.0]
+range      = [0.0, 1.0]
+max_rate   = 0.01
+max_accel  = 0.004
+deadband   = 0.0008
+hold       = "mechanical"
+priority   = "B"
+
+[channel."season.armature"]
+driver     = "stepper"
+address    = "motion0:m3"
+source     = "season_phase"
+transfer   = "linear_wrap"
+domain     = [0.0, 1.0]
+range      = [0.0, 1.0]
+max_rate   = 0.00002     # one revolution per island year = one per real day
+max_accel  = 0.00001
+deadband   = 0.0002
+hold       = "mechanical"
+priority   = "B"
+
+[channel."sea.swell"]
+driver    = "servo_bldc"
+address   = "motion1:m0"
+source    = "sea_state"
+transfer  = "smoothstep"
+domain    = [0.0, 9.0]
+range     = [0.0, 1.0]
+max_rate  = 0.06
+max_accel = 0.03
+deadband  = 0.01
+priority  = "B"
+
+[channel."canopy.sway"]
+driver    = "voice_coil"
+address   = "motion1:m1"
+source    = "wind_speed_ms"
+transfer  = "smoothstep"
+domain    = [0.0, 25.0]
+range     = [0.0, 1.0]
+max_rate  = 0.20
+max_accel = 0.10
+deadband  = 0.006
+priority  = "B"
+
+[channel."weather.vane"]
+driver    = "stepper"
+address   = "motion1:m2"
+source    = "wind_dir_deg"
+transfer  = "linear_wrap"
+domain    = [0.0, 360.0]
+range     = [0.0, 1.0]
+max_rate  = 0.017        # ~6 deg/s, heavily damped
+max_accel = 0.006
+deadband  = 0.004
+priority  = "B"
+
+# The hour hand of the piece.  Its entire visible travel is consumed over the
+# object's lifetime; it cannot be faked and it cannot be rushed.  Read it with a
+# loupe against the engraved scale.
+[channel."subsidence.index"]
+driver    = "linear_actuator"
+address   = "motion1:m3"
+source    = "island_age_years"
+transfer  = "linear"
+domain    = [0.0, 200000.0]
+range     = [0.0, 1.0]
+max_rate  = 0.0000001
+max_accel = 0.0000001
+deadband  = 0.00002
+hold      = "mechanical"
+priority  = "B"
+
+[channel."water.level"]
+driver    = "stepper"
+address   = "motion2:m0"
+source    = "lake_stage_norm"
+transfer  = "linear"
+domain    = [0.0, 1.0]
+range     = [0.0, 1.0]
+max_rate  = 0.002
+max_accel = 0.001
+deadband  = 0.004
+priority  = "B"
+
+# ---------------------------------------------------------------- sound (C)
+# Struck, never played through a speaker.  Default off; most owners will hear
+# their island fewer than a dozen times a year.
+
+[channel."chime.event"]
+driver   = "solenoid"
+address  = "motion2:m1"
+source   = "event_flags"
+trigger  = ["speciation", "eruption", "extinction"]
+range    = [0.0, 1.0]
+max_rate = 1.0
+max_accel = 1.0
+priority = "C"
