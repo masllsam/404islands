@@ -44,6 +44,7 @@ class IslandConfig:
     latitude_deg: float = 19.5
     longitude_deg: float = -155.5
     genesis_years: float = 400000.0   # deep-time spin-up before ignition
+    post_shield_years: float = 0.0    # further deep time with the hotspot gone
     strict_ledger: bool = False       # True in CI; anomalies are logged on hardware
 
     @classmethod
@@ -91,6 +92,8 @@ class Island:
         self.soil_water = water.SoilColumn.create(self.grid, self.state.soil_depth)
         self.diagnostics: dict = {}
         self._spin_up(config.genesis_years)
+        if config.post_shield_years > 0.0:
+            self._post_shield(config.post_shield_years)
 
         # The soil column must be built from the regolith the spin-up actually
         # produced, not from the bare rock we started with -- otherwise every
@@ -162,6 +165,23 @@ class Island:
         self.state.year = 0.0
         self.veg.soil.p_available = np.maximum(self.veg.soil.p_available, 0.02)
         self._colonise_initial()
+
+    def _post_shield(self, years: float) -> None:
+        """Carry the island past the shield stage before ignition.
+
+        While the hotspot is still feeding it, construction resurfaces the cone
+        about as fast as rivers cut it -- which is why Mauna Loa has no canyons
+        and Kauai does.  Cutting the supply and running on lets the landscape
+        develop, and it is how most of the edition's islands will be found: the
+        interesting landforms belong to the erosional stage.
+        """
+        self.volcano.q_max_m3_yr = 0.0
+        self.volcano.chamber_volume_m3 = 0.0
+        dt = 2000.0
+        steps = int(years / dt)
+        for i in range(steps):
+            self._step_century(dt, tick=-(steps - i) - 1)
+        self.state.year = 0.0
 
     def _colonise_initial(self) -> None:
         env = self._bio_env()

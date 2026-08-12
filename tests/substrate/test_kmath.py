@@ -41,15 +41,22 @@ def test_exp_saturates_rather_than_raising():
     assert np.isinf(km.exp(np.array([1e4]))[0])
 
 
+# Rendering ports are outside the determinism contract by design (docs/02 §8):
+# they consume StateFrames and produce pixels, and cannot influence a frame, a
+# hash, or an island's history.  Everything that *can* -- the kernel modules, the
+# substrate, the state frame, the kinetic score -- is still guarded.
+_LIBM_EXEMPT = {"kmath.py", "render.py", "atlas.py", "ascii_render.py"}
+
+
 def test_no_libm_in_hot_path():
-    """The kernel must not reach for the platform's transcendentals."""
+    """Nothing that can affect an island's history may call platform libm."""
     import pathlib
     import re
     banned = re.compile(r"\bnp\.(exp|log|log1p|expm1|sin|cos|tan|arcsin|arccos|arctan2|power)\b")
     offenders = []
     for path in pathlib.Path("kernel").rglob("*.py"):
-        if path.name in ("kmath.py", "ascii_render.py"):
-            continue           # kmath *is* the implementation; ascii is a port
+        if path.name in _LIBM_EXEMPT:
+            continue
         for n, line in enumerate(path.read_text().splitlines(), 1):
             if banned.search(line) and "noqa: libm" not in line:
                 offenders.append(f"{path}:{n}: {line.strip()}")

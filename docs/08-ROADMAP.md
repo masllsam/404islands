@@ -23,7 +23,10 @@ No milestone is "infrastructure only".
 - [x] Evosphere: quantitative genetics with emergent selection gradients, drift scaled by
       Nₑ, founder effects, Dobzhansky–Muller speciation, the chronicle.
 - [x] Ports: StateFrame with canonical serialisation and hash chaining; Kinetic Score
-      loader with the Motion Envelope; terminal renderer; CLI.
+      loader with the Motion Envelope; **the display** — a software raymarching scene
+      renderer (real sun, cast shadows, Beer's-law water, reef, advected cloud with
+      shadows, discharge-placed rivers) and the labelled field atlas; a dependency-free
+      PNG encoder; terminal renderer; CLI.
 - [x] **All four conservation budgets close to ~1e-17 relative.**
 - [x] Emergent tests passing that were never fitted: Hack's law h = 0.507 (published 0.57),
       slope–area concavity θ = 0.471 (published 0.4–0.6), orographic ratio 29×, TOA
@@ -40,6 +43,11 @@ No milestone is "infrastructure only".
 - Consumers, fire spread, and the marine ecosystem are specified but not implemented.
 - The reference kernel runs ~1.8 s per island-year at 96². The Heart needs < 3 s at 128²
   in Rust — plausible but unproven.
+- The scene renderer is a NumPy raymarcher at ~10 s a frame. It specifies the image; it
+  cannot produce it in real time. The GPU shader is Milestone 3 (`docs/09` §6).
+- Cloud opacity carries one presentation-side constant (`Renderer.cloud_gain`): the full
+  simulated cloud fraction is meteorologically right and would also hide the island for
+  days at a time. Isolated and labelled, like every other tuned value.
 
 ## Milestone 2 — Fidelity
 
@@ -61,6 +69,8 @@ No milestone is "infrastructure only".
 ## Milestone 3 — The runtime
 
 - [ ] Rust `no_std`-capable port reproducing the reference golden vectors bit-for-bit.
+- [ ] GPU renderer matching the reference image within a published perceptual tolerance,
+      at 30 fps on the Heart's SoC (`docs/09` §6).
 - [ ] Cross-architecture determinism gate (x86-64 vs aarch64), 10,000 sim-years.
 - [ ] Checkpointing with triple redundancy; power-loss injection, 10,000 trials, zero
       corrupted islands.
@@ -101,6 +111,8 @@ Milestones are ordered but not serial. Independent tracks that can start now:
 | Track | Depends on | Where |
 |---|---|---|
 | Land-surface energy closure | nothing | `kernel/atmos/energy.py` |
+| GPU renderer | frozen `docs/09` | new `runtime/render/` |
+| Scene art direction | nothing | `kernel/ports/render.py` |
 | Consumers / trophic web | nothing | new `kernel/bio/consumers.py` |
 | Fire spread | nothing | new `kernel/bio/fire.py` |
 | Least-cost demes | nothing | `kernel/evo/genetics.py::region_map` |

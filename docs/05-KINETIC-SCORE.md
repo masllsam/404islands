@@ -30,8 +30,10 @@ update* without ever altering the artwork's history.
 2. **Silence is a specification.** Audible actuator noise is a defect. Metal-geared servos
    under continuous PWM hum; therefore continuous-hold channels use either non-back-drivable
    mechanisms with power-off holding, or magnetic/flexure suspensions. See §7.
-3. **Light comes from behind the material.** Plique-à-jour enamel is lit through
-   (`docs/01` §8). Emitters sit behind, never in front, never visible.
+3. **Light frames the display; it never competes with it.** The image is the work
+   (`docs/09`), and every lighting channel here surrounds and answers it. Emitters sit
+   behind the plique-à-jour enamel so the material is lit *through*, never in front of it,
+   and never visible. No channel may cast light onto the panel itself.
 4. **The score never invents.** Every channel traces to a physical quantity. If nothing in
    the island justifies a movement, nothing moves. Idle is a legitimate and frequent state.
 5. **Degrade gracefully.** With half the channels dead the piece must still be beautiful and
@@ -46,7 +48,7 @@ update* without ever altering the artwork's history.
 |---|---|---|---|
 | `sun.intensity` | 16-bit PWM | `sky_luminance` | perceptual (CIE L*) curve, not linear |
 | `sun.cct` | dual-white mix | `sky_colour_temp_K` | 1800 K at horizon → 6500 K at zenith, from real Rayleigh/Mie path length |
-| `sun.angle` | 2-axis gimbal or emitter array | `sun_elevation/azimuth` | casts a **real shadow** across the relief — the single most convincing element in the piece |
+| `sun.angle` | 2-axis gimbal or emitter array | `sun_elevation/azimuth` | throws the room's light from the same direction as the sun on the display, so the object and its image agree |
 | `sky.dome` | RGBW array | cloud, humidity, sun elevation | overcast is *diffuse and flat*; clear is *hard and directional*. The difference between them is what a viewer feels as weather |
 | `moon.*` | PWM + CCT | `moon_phase`, `moon_elevation` | 4100 K, ~0.3 % of solar. Nights must be genuinely dark |
 | `canopy.glow` | RGB behind enamel leafwork | `canopy_greenness`, `bloom_index` | drives the demantoid green of the reference plate |

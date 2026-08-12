@@ -31,6 +31,9 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--years", type=int, default=25, help="island-years to run after ignition")
     p.add_argument("--genesis", type=float, default=400000.0,
                    help="deep-time spin-up before ignition, in years")
+    p.add_argument("--post-shield", type=float, default=0.0,
+                   help="further deep time after the hotspot moves on; this is the "
+                        "stage where rivers carve the landscape (try 300000)")
     p.add_argument("--grid", type=int, default=96, help="cells per side")
     p.add_argument("--cell", type=float, default=240.0, help="cell size, metres")
     p.add_argument("--lat", type=float, default=19.5, help="latitude, degrees")
@@ -41,6 +44,16 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--strict", action="store_true",
                    help="fail hard on any ledger residual (CI mode)")
     p.add_argument("--json", type=str, default=None, help="write final state summary here")
+    p.add_argument("--image", type=str, default=None,
+                   help="write the scene as a PNG (the artwork's primary view)")
+    p.add_argument("--atlas", type=str, default=None,
+                   help="write the field atlas as a PNG: every simulated field, labelled")
+    p.add_argument("--image-size", type=str, default="960x600")
+    p.add_argument("--hour", type=float, default=None,
+                   help="time of day for the image, 0..24 (default: whatever time it is)")
+    p.add_argument("--view-azimuth", type=float, default=215.0)
+    p.add_argument("--view-elevation", type=float, default=19.0)
+    p.add_argument("--zoom", type=float, default=1.75)
     p.add_argument("--quiet", action="store_true")
     return p
 
@@ -52,7 +65,7 @@ def main(argv=None) -> int:
         seed=seed_from_phrase(args.seed), island_id=args.island_id,
         nx=args.grid, ny=args.grid, cell_size_m=args.cell,
         latitude_deg=args.lat, genesis_years=args.genesis,
-        strict_ledger=args.strict,
+        post_shield_years=args.post_shield, strict_ledger=args.strict,
     )
 
     t0 = time.time()
@@ -84,9 +97,30 @@ def main(argv=None) -> int:
                 line += "  <- " + ", ".join(sorted(set(events)))
             print(line, flush=True)
 
+    if args.hour is not None:
+        island.state.sim_days = float(int(island.state.sim_days)) + args.hour / 24.0
+
     frame = island.delta_frame()
     full = island.full_frame()
     t_run = time.time() - t1
+
+    if args.image or args.atlas:
+        w, h = (int(v) for v in args.image_size.lower().split("x"))
+        if args.image:
+            from .ports.render import Renderer
+            from .ports import png
+            t2 = time.time()
+            r = Renderer(island, width=w, height=h,
+                         azimuth_deg=args.view_azimuth,
+                         elevation_deg=args.view_elevation, zoom=args.zoom)
+            png.write(args.image, r.render())
+            if not args.quiet:
+                print(f"\nwrote {args.image}  ({w}x{h}, {time.time() - t2:.1f} s)")
+        if args.atlas:
+            from .ports import atlas
+            atlas.write(island, args.atlas)
+            if not args.quiet:
+                print(f"wrote {args.atlas}")
 
     if not args.quiet:
         print()

@@ -1,13 +1,14 @@
 # 06 — Materials, Making, and Conservation
 
 > **Kurzfassung (DE).** Der Körper aus Gold, Platin, Emaille, Aluminiumoxid-Keramik,
-> Saphir und harten Edelsteinen hält Jahrhunderte. Die Elektronik nicht — sie ist
-> absichtlich ein austauschbares Serviceteil in einem dokumentierten Sockel. Das
-> Wichtigste: **das Bild der Insel ist kein Display.** Es ist ein echtes, in Keramik und
-> Gold geschnittenes Relief, auf dem Licht und Schatten spielen. Displays altern, Relief
-> und Licht nicht. Und alle 25 Jahre darf der Besitzer das Relief neu schneiden lassen —
-> nach dem *aktuellen* Zustand der Insel. Die alten Reliefs bleiben im Sockel liegen, wie
-> Bohrkerne. Das Objekt sammelt seine eigene Erdgeschichte als physische Schichten.
+> Saphir und harten Edelsteinen hält Jahrhunderte. **Das Werk selbst ist das Display**
+> (siehe `docs/09-DISPLAY.md`): darauf läuft die Insel als live gerenderte Grafik. Display
+> und Elektronik halten keine 300 Jahre — deshalb sind beide bewusst als austauschbare
+> Serviceteile in dokumentierten Fassungen gebaut, hinter einem Saphirfenster. Was bleibt,
+> ist der eingravierte Seed und der veröffentlichte Algorithmus: solange beide existieren,
+> kann die Insel exakt neu berechnet und auf jedem künftigen Bildschirm wieder gezeigt
+> werden. Optional, nicht als Ersatz: alle 25 Jahre ein in Keramik geschnittenes Relief
+> des dann aktuellen Zustands, das im Sockel gesammelt wird — wie Bohrkerne.
 
 ---
 
@@ -22,52 +23,50 @@ So the electronics are not asked to be permanent. The design instead follows one
 
 And one consequence, which is the most important engineering decision in the whole project:
 
-> **The island's landscape is not displayed. It is carved.**
+> **The image is serviced, not preserved. The seed is preserved.**
 
-## 2. The relief — why the primary image is physical
+The display shows the island; the display is a 20-to-40-year part; and that is fine,
+because the artwork does not live in the panel. It lives in the engraved seed and the
+published algorithm, from which the island can be recomputed exactly and shown again on
+whatever displays images in that century (`docs/09` §7).
 
-A screen is a light source pretending to be a surface. It ages (organic emitters decay,
-polarisers yellow, backlights shift, drivers fail), it is anachronistic within twenty
-years, and it looks like a screen — which is to say, like everything else.
+## 2. The display is the work
 
-The primary visual element of the piece is therefore a **physical bas-relief of the actual
-simulated terrain**, cut by 5-axis CNC and hand-finished, in high-purity alumina ceramic
-with selective gilding, at a vertical exaggeration of ~2.5×. Around and through it:
-plique-à-jour enamel for water and canopy, gemstone-set reef and shoreline, gold whiplash
-lines for the principal watercourses.
+The piece is a display in a vessel, and what it shows is the island rendered live from the
+simulation, continuously (`docs/09-DISPLAY.md`). Everything material in this document —
+the gold, the enamel, the gemstone setting, the light and motion of `docs/05` — frames and
+answers that image. They are the reliquary; the image is the relic.
 
-Light and motion then do the living part:
+The panel sits behind a **sapphire window** in a bezel of 18k gold, with the plique-à-jour
+enamel and gem-set work carried around the aperture so that the frame and the image read as
+one object rather than as a screen someone mounted in jewellery. Emitters for the kinetic
+light channels sit behind the enamel, never in front, so the surrounding material is lit
+*through* — the same optical principle as the image itself.
 
-- The sun crosses at its real angle and **casts real shadows into real valleys**. At low
-  sun the canyons go black and the ridges catch. Nothing on a display comes close, and it
-  will not look dated in 2150.
-- Weather is diffuse vs. hard light, and colour temperature.
-- Vegetation is coloured light through translucent enamel.
-- Water level, tide, sea state, season, and deep time are mechanical (`docs/05` §3.2).
+An earlier revision of this document argued the opposite: that the primary image should be
+a carved physical relief, because displays do not last three centuries. That was the wrong
+trade. It solved a materials problem by removing the thing the work is. The longevity
+answer is §5 and §7 — service the panel, guarantee the specification — and it does not
+require giving up the image.
 
-Optionally, a small high-density display sits behind a sapphire window in the base as an
-**instrument panel** — the chronicle, the ledger, the numbers — explicitly framed as
-equipment, not as the artwork. When it dies, the artwork is undiminished. This is the
-correct place for a screen: subordinate, honest, replaceable.
+## 3. The Recarving — an optional companion, not a substitute
 
-## 3. The Recarving — the piece keeps its own strata
+The display shows the island now. A **Recarving** captures a moment of it in permanent
+material:
 
-The relief is the island as it was at a moment. The island moves on. So:
+**Every 25 years, the owner may commission one.** The current state frame is taken, and a
+bas-relief of the island's terrain at that instant is cut by 5-axis CNC in high-purity
+alumina and hand-finished with selective gilding, at ~2.5× vertical exaggeration. It is
+dated, edge-labelled, and kept in a drawer in the base.
 
-**Every 25 years, the owner may commission a Recarving.** The current state frame is taken,
-a new relief is cut and finished, and it replaces the one in the piece. The old relief is
-not discarded — it is archived in a drawer in the base, edge-labelled with its dates, like a
-stack of core samples.
+After a century the drawer holds four. Lay them side by side and you are holding the
+island's geological history: the valleys deeper, the reef wider, the summit lower. Nobody
+has to explain what happened — you can see it, and measure it with callipers.
 
-After a century the piece holds four reliefs. Lift them out and lay them side by side and
-you are holding the island's geological history in your hands: the valleys deeper, the
-reef wider, the summit lower. Nobody has to explain what happened. You can *see* it, and
-you can measure it with callipers.
-
-The Recarving is a service ritual (like re-gilding an icon or servicing a movement), a
-renewal of the relationship between studio and owner, and — bluntly — the mechanism by
-which the workshop remains alive and funded long enough to still exist when the Hearts need
-replacing.
+This is a companion to the display, never a replacement for it. It is also a service
+ritual, a renewal of the relationship between studio and owner, and — bluntly — part of how
+the workshop stays alive and funded long enough to still exist when the Hearts and panels
+need replacing.
 
 ## 4. Material schedule
 
@@ -79,7 +78,7 @@ replacing.
 | **Platinum (950/Ir)** | the Soul plate, high-stress pivots | millennia | inert, tough, does not work-harden badly |
 | **Vitreous enamel** on gold | plique-à-jour canopy and water, guilloché sky, champlevé fields | millennia (glass) | brittle; sensitive to thermal shock and impact, not to time. Lead-free formulations only |
 | **High-purity alumina (99.7 %)** | relief substrate, structure | geological | chosen over zirconia deliberately — see §4.3 |
-| **Synthetic sapphire** | windows, engraved Soul plate, wear surfaces | geological | Mohs 9, chemically inert, optically stable |
+| **Synthetic sapphire** | **the display window**, engraved Soul plate, wear surfaces | geological | Mohs 9, chemically inert, optically stable; AR-coated on the inner face only, so the coating is never exposed to handling |
 | **Fused silica** | light guides, optical elements | geological | no yellowing, unlike any polymer |
 | **Demantoid / tsavorite garnet** | the greens of the reference plate | permanent | Mohs 7–7.5, no cleavage, stable — the durable route to that colour |
 | **Green sapphire, spinel, chrome diopside** | supporting greens | permanent | |
@@ -160,7 +159,7 @@ named treatment protocols. Written for a conservator in 2180 who has never heard
 | Heart dies | 15–40 yr | Island pauses; **no state lost** (checkpoints) | Swap Heart; resume from last full frame |
 | LED output shifts/dims | 20–50 yr | Colour drift | Replace emitter board (part of the Heart) and re-calibrate to the published spectrum |
 | Actuator wear | 30–80 yr | Channel drops out | Replace; envelope already degrades gracefully (`docs/05` §2.5) |
-| Instrument display fails | 10–25 yr | Panel dark | Replace, or leave dark — the artwork is unaffected |
+| Display panel dims, shifts, or fails | 20–40 yr | The image degrades or stops | Replace the panel module and re-profile to the piece's archived colorimetry (`docs/09` §7). A permanent element is never disturbed |
 | Enamel chip | impact | Visible loss | Conservator repair; recorded in the dossier. Honest repair, never invisible restoration |
 | All electronics unavailable | any time | Piece is static | Mechanical element still winds and runs (`docs/01` §6); the Soul plate still carries the seed; the island can be recomputed elsewhere and, if desired, recarved |
 

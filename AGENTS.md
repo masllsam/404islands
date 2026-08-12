@@ -44,9 +44,15 @@ revision did exactly that and it made the ledger meaningless. If you cannot clos
 say so in `docs/08` and let the ledger report it open. An honest open budget is worth more
 than a fake closed one.
 
-**R5 — Nothing in `kernel/` may know about presentation.** No colours, no channel names, no
+**R5 — Nothing in `kernel/` *outside `ports/`* may know about presentation.** No colours, no channel names, no
 frame rates, no display. The kernel emits StateFrames; ports consume them. If you find
 yourself importing a port from a module, the design is wrong.
+
+The rendering ports (`ports/render.py`, `ports/atlas.py`, `ports/ascii_render.py`) are
+exempt from the determinism contract — they consume StateFrames and produce pixels, and
+cannot influence a frame or a hash — but not from R3: **every pixel must trace to a state
+variable** (`docs/09` §2.1). If a change makes the image prettier by severing that link,
+reject it. The one thing the display must never become is an illustration of a simulation.
 
 ## 3. Layout
 
@@ -69,7 +75,11 @@ archive/       superseded work, kept for reference, not maintained
 ```bash
 pip install numpy pytest
 
-# ignite an island and watch it
+# ignite an island and draw it
+python -m kernel.cli --seed island-001 --years 30 --post-shield 300000 \
+    --hour 8.5 --image scene.png --atlas atlas.png
+
+# or watch it in the terminal
 python -m kernel.cli --seed island-001 --years 25 --render
 
 # with the hardware channel mapping evaluated
@@ -77,7 +87,7 @@ python -m kernel.cli --seed island-001 --years 10 \
     --score hardware/scores/vitrine-01.toml
 
 # the gates
-python -m pytest tests/substrate tests/determinism -q   # fast, must always pass
+python -m pytest tests/substrate tests/determinism tests/ports -q   # fast, must always pass
 python -m pytest tests/emergent -q                      # slow (~2 min)
 ```
 

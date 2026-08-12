@@ -6,8 +6,8 @@
 > weiter, solange es jemanden gibt, der ihr Strom gibt. Sie wird jeden Tag anders sein,
 > und niemand — auch wir nicht — weiß, wie sie in vierzig Jahren aussieht. Das Gehäuse
 > ist Gold, Emaille, Keramik, Saphir und Edelstein und hält Jahrhunderte. Die Elektronik
-> hält das nicht aus und soll es auch nicht: austauschbar, dokumentiert, ein Verschleiß-
-> teil. Unvergänglich ist die Zahl — der eingravierte Seed und der veröffentlichte
+> und das Display halten das nicht aus und sollen es auch nicht: austauschbar,
+> dokumentiert, Verschleißteile hinter einem Saphirfenster. Unvergänglich ist die Zahl — der eingravierte Seed und der veröffentlichte
 > Algorithmus. Solange beide existieren, kann die Insel jederzeit exakt neu berechnet
 > werden. Das eigentliche Material dieses Kunstwerks ist Mathematik; das Gold ist ihr
 > Reliquiar.
@@ -69,7 +69,7 @@ and it maps directly onto the multi-rate architecture (`docs/02-ARCHITECTURE.md`
 
 | You look for | You see | Driven by |
 |---|---|---|
-| **10 seconds** | Light. The sun is at a real angle; the colour temperature is the colour temperature of that sun through that atmosphere. Something moves — the sea, a leaf, a drop of enamel-and-gold on its stem. | Real-time render + servo/LED channels |
+| **10 seconds** | The island, drawn live: the sun at a real angle casting a real shadow into a real valley, the sea's colour by depth, the reef rim. The light in the room shifts with it. | Real-time render (`docs/09`) + servo/LED channels |
 | **A few minutes** | Weather passing. Cloud building on the windward slope, rain arriving, the light going flat and grey, then breaking. | Atmosphere + orographic precipitation |
 | **A day** | A full island year. Seasons swing; the canopy leafs out and senesces; a storm season peaks. | Insolation + phenology |
 | **A year** | Succession. Bare lava becomes lichen becomes scrub becomes forest. A lake fills or drains. A river captures its neighbour and abandons a valley. | Landscape evolution + demography |
@@ -92,8 +92,9 @@ forms conservators already know how to care for. This is the body, and it is bui
 inherited, not maintained.
 
 ### The Heart — *decades, by design*
-A sealed compute-and-motion module in a **published, standardised socket**: power,
-mechanical datum, and a documented signal interface. It is a consumable. It is meant to be
+The display panel and a sealed compute-and-motion module, both in **published, standardised
+sockets**: power,
+mechanical datum, and a documented signal interface. They are consumables. They are meant to be
 replaced three, five, ten times over the object's life — by us, by a successor
 institution, or by a competent engineer in 2180 working from the open specification. Spare
 Hearts for all 404 pieces are manufactured with the edition and escrowed. Replacing the
@@ -135,9 +136,12 @@ engraved seed. It is the object's message in a bottle.
   requires a blockchain, and nothing here should acquire one.
 - **Not a game.** There is no score, no goal, no progression to complete. The owner
   influences conditions at the margins (see `docs/07`), but cannot win.
-- **Not a screensaver.** If the simulation could be replaced by a recording without anyone
-  noticing, we have failed. The defence against this is falsifiability: the piece exposes
-  its state, its conservation ledger, and its seed. Anyone may recompute it and check.
+- **Not a screensaver.** It is a display, and it is emphatically not a loop. If the
+  simulation could be replaced by a recording without anyone noticing, we have failed. The
+  defences are falsifiability and legibility: the piece exposes its state, its conservation
+  ledger and its seed, so anyone may recompute it and check — and its second face, the
+  atlas (`docs/09` §2.2), shows every simulated field separately, labelled, so that what is
+  being computed is visible rather than merely asserted.
 - **Not decoration that happens to be technical.** The science must be correct where we
   claim it, and explicitly labelled where it is approximate. The catalogue documents every
   approximation. A piece that lies about its physics is a forgery of itself.
