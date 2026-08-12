@@ -48,7 +48,7 @@ Every element traces to a state variable. Nothing is decorative invention:
 | Gold watercourses | discharge on the D8 flow network |
 | Sea colour | depth, by Beer's-law extinction |
 | The turquoise rim | `reef_thickness` where coral actually accreted |
-| Cap cloud over the summit | orographic uplift; it rides *over* the ridge that lifts it |
+| Cap cloud over the summit | orographic uplift, scaled by how much the *sea breeze has condensed this afternoon* — so the island looks different at dawn and at four o'clock. It rides *over* the ridge that lifts it |
 | Broken trade cloud | coverage from the frame's cloud fraction, advected downwind at the simulated wind speed |
 | Cloud shadows crossing land and water | the same cloud field, sampled along the sun ray |
 | Snow | terrain above the freezing level from the actual lapse rate |
@@ -57,6 +57,22 @@ Every element traces to a state variable. Nothing is decorative invention:
 **Consequence to protect:** if a change makes the image prettier but severs a pixel from
 its state variable, reject it. The one thing this display must never become is an
 illustration of a simulation.
+
+### 2.1.1 The day
+
+The fast clock runs at 15 simulated minutes a tick, so the scene has something to do
+between one minute and the next: the sun crosses, the land heats and cools while the ocean
+does not, the sea breeze builds its cap cloud through the afternoon and lets it go after
+dark, showers arrive, and the sky drifts at whatever wind the island has today. None of it
+is keyframed.
+
+```bash
+python -m kernel.cli --seed island-001 --years 30 --post-shield 300000 --day-sheet day.png
+```
+
+renders one simulated day as a contact sheet — twelve frames, each labelled with the hour,
+solar elevation, cloud fraction, temperature and wind. It is the most direct answer to
+"is it actually running".
 
 ### 2.2 The atlas — the island as it is
 

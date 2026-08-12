@@ -140,11 +140,25 @@ Snow when the wet-bulb temperature is below ~1 °C, with an accumulation/melt mo
 
 - **Trade winds** at the island's latitude with seasonal ITCZ migration, plus a
   slowly-varying stochastic component (Ornstein–Uhlenbeck, seeded per D4) so the wind is
-  never a repeating loop.
-- **Sea breeze / land breeze**: diurnal reversal driven by the actual simulated land–sea
-  surface temperature contrast. Small islands have a characteristic afternoon convergence
-  cloud over the peak — a beautiful, daily, entirely emergent event that the object shows
-  every single simulated afternoon.
+  never a repeating loop. Timescales: ~2.5 days for wind speed, ~4 days for the synoptic
+  state, so the island has gusty spells and slack spells rather than white noise.
+  Implemented; the OU noise carries the `sqrt(dt)` scaling, without which the weather's
+  variability would depend on how finely it happened to be integrated.
+- **Sea breeze / land breeze** — *implemented, `kernel/atmos/weather.py`.* Land has almost
+  no heat capacity beside a 50 m mixed layer, so it warms and cools within hours while the
+  sea barely moves. The skin temperature is solved from the land's own energy balance
+  (bare rock overshoots the air by 15–25 K at midday; a wet forest hardly moves, because it
+  spends the energy transpiring). The resulting contrast draws air inward from every side,
+  and on an island the inflow has nowhere to go but up.
+
+  The **afternoon cap cloud** follows: it builds with a ~1.4 h lag, peaks in mid-afternoon
+  *after* solar noon, and dissolves over ~2.6 h once the forcing stops. Convergence scales
+  with the island's own diameter (saturating near 9 km — a breeze front only penetrates so
+  far in an afternoon) and is torn apart by strong synoptic flow, which is why it is a
+  calm-day phenomenon. Measured on a 4 km island: land 24 → 31 °C, cap cloud 0.05 → 0.54,
+  peak at 14:00.
+
+  One tuned scalar, `BREEZE_TO_CLOUD`, converts forcing to cover; isolated and labelled.
 - **Tropical cyclones**: genesis conditioned on SST > 26.5 °C, sufficient mid-level
   humidity, low shear, and latitude > 5°; intensity capped by potential intensity theory
   (Emanuel 1986) from SST and outflow temperature. Passage delivers extreme wind and rain,
@@ -159,6 +173,8 @@ Snow when the wet-bulb temperature is below ~1 °C, with an accumulation/melt mo
 | Grey-band radiation, not line-by-line | ~few W/m² bias | budget still closes exactly; bias documented |
 | Linear orographic theory | breaks for very steep terrain and blocked flow (Froude < 1) | flagged at runtime; blocked-flow regime approximated by a flow-diversion correction |
 | Slab ocean, no dynamic currents | no ENSO-like variability | a prescribed interannual oscillator is a Milestone-3 addition |
+| Fast-clock boundary layer is diagnostic, with no heat storage | no nocturnal inversion, no fog | its inertia is negligible beside the mixed layer's at a 15-minute step, and a reservoir we could not close would open the energy budget for a detail nobody can see |
+| Sea-breeze convergence is a bulk index, not a resolved circulation | no wind field, no breeze front position | the domain cannot resolve the circulation; the cloud it produces is validated against its observed timing instead |
 | Aerosols and chemistry absent | no volcanic-haze radiative forcing | eruption-driven forcing is a planned addition; the coupling matters for the object |
 
 ## 7. References

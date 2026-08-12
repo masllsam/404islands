@@ -88,7 +88,7 @@ multiples of one base tick.
 
 | Clock | Base step | Modules stepped | Notes |
 |---|---|---|---|
-| `T_FAST` | 1 tick = 15 sim-minutes | radiation, boundary layer, canopy flux | drives what the eye sees |
+| `T_FAST` | 1 tick = 15 sim-minutes | solar geometry, land skin temperature, sea breeze, cloud, showers, wind | drives what the eye sees — **implemented**, `kernel/atmos/weather.py`, `Island.step_fast()` |
 | `T_DAY` | 96 ticks = 1 sim-day | hydrology routing, soil moisture, phenology, disturbance dice | |
 | `T_YEAR` | 365 sim-days | demography, mortality, recruitment, soil carbon, reef accretion | |
 | `T_CENTURY` | 100 sim-years | landscape evolution, subsidence, isostasy, weathering, speciation check | deep time |

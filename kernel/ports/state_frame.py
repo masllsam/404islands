@@ -18,7 +18,7 @@ from dataclasses import asdict, dataclass, field
 
 MAGIC = b"404I"
 SF_VERSION = 1
-KERNEL_SEMVER = (0, 1, 0)
+KERNEL_SEMVER = (0, 2, 0)   # 0.2: fast clock, two new delta fields
 
 # Fixed field order for the delta frame.  Append only, never reorder (docs/04 §6).
 DELTA_FIELDS = (
@@ -30,12 +30,15 @@ DELTA_FIELDS = (
     "bloom_index", "senescence_index", "npp_norm", "fire_activity",
     "population_stress", "season_phase", "year_fraction", "island_age_years",
     "summit_elevation_m", "land_area_km2",
+    # --- appended in kernel 0.2 (docs/04 §6: append only, never reorder) ---
+    "convective_cloud", "squall",
 )
 
 EVENT_BITS = {
     "eruption": 0, "earthquake": 1, "cyclone": 2, "landslide": 3,
     "fire": 4, "bloom": 5, "speciation": 6, "extinction": 7,
     "colonisation": 8, "reef_stage_change": 9, "drought": 10, "flood": 11,
+    "shower": 12,
 }
 
 

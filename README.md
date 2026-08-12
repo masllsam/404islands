@@ -23,6 +23,9 @@ made, never repeating, and outliving everyone who will own it.
 
 **It is really running.** Magma arrives from a hotspot, a chamber pressurises, and the
 volcano erupts when its walls fail — so eruption intervals are an output, not a schedule.
+On the fast clock — 15 simulated minutes a tick — the land heats and cools while the ocean
+barely moves, and the sea breeze that contrast drives builds a cap cloud over the summit
+through the afternoon and lets it go after dark. Nothing about that day is keyframed.
 Trade winds lift over the edifice and rain falls where Clausius–Clapeyron says it must, so
 one flank becomes rainforest and the other a desert. Rivers cut where the stream-power law
 puts them. Plants photosynthesise through Farquhar kinetics, compete for light and water
@@ -55,9 +58,11 @@ the next century by someone who never heard of us.
 ```bash
 pip install numpy pytest
 
-# Ignite an island and draw it: the scene, and the atlas of every field it computes.
+# Ignite an island and draw it: the scene, the atlas of every field it computes,
+# and one simulated day as a contact sheet.
 python -m kernel.cli --seed island-001 --years 30 --post-shield 300000 \
-    --hour 8.5 --image scene.png --atlas atlas.png --image-size 1100x690
+    --hour 8.5 --image scene.png --atlas atlas.png --day-sheet day.png \
+    --image-size 1100x690
 ```
 
 Genesis runs 400,000 years of deep time (eruptions, flexure, subsidence, erosion, reef);

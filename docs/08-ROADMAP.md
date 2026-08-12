@@ -53,10 +53,13 @@ No milestone is "infrastructure only".
 
 - [ ] Close the land-surface energy budget: per-cell radiation on real terrain with cast
       shadows, Newton-solved skin temperature, Monin–Obukhov stability corrections.
-- [ ] Multi-rate coupler proper: `T_FAST` weather stepping instead of annual climatology,
-      so the piece has weather to show at the minute scale.
-- [ ] Diurnal sea breeze and the afternoon summit convergence cloud — the daily event the
-      object shows every simulated afternoon.
+- [x] **`T_FAST` weather stepping** (`kernel/atmos/weather.py`, `Island.step_fast()`):
+      diurnal heating with a solved land skin temperature, sea-breeze convergence, the
+      afternoon cap cloud with its build and decay lags, showers, and Ornstein-Uhlenbeck
+      wind and synoptic state. Two new delta-frame fields; kernel 0.2.
+- [x] **The day sheet** — one simulated day as a contact sheet (`--day-sheet`).
+- [ ] Per-cell weather fields rather than island-mean scalars, so a squall can cross the
+      island instead of covering it.
 - [ ] Least-cost-path deme partition over real topography, so a newly-cut canyon physically
       isolates two populations.
 - [ ] Individual-based genetics below Nₑ = 500 (currently analytic everywhere).
@@ -141,6 +144,9 @@ Numbers from the Milestone-1 kernel, recorded here so regressions are visible.
 | Tropical NPP | **1.07 kg C m⁻² yr⁻¹** | 0.8–1.5 |
 | Energy / water / carbon budget residual | **~1e-17 relative** | ≤ 1e-9 required |
 | Reference kernel speed | 1.8 s per island-year at 96² | Rust target < 3 s at 128² |
+| Diurnal land temperature range, 4 km tropical island | **24.1 → 30.8 °C** | 5–10 K typical |
+| Cap cloud, same island | **0.05 → 0.54, peak 14:00** | peaks 1–4 h after solar noon |
+| Scene render | ~10 s a frame at 1100×690 (NumPy) | GPU shader, Milestone 3 |
 
 **A finding worth recording:** at 15 km domains with 200 kyr of construction, roughly half
 of all seeds never break the surface at all — they stay guyots. Emergence is not the

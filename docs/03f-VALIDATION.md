@@ -36,7 +36,10 @@ in front of a collector or a curator.
 | **Budyko curve** — `E/P` as a function of `PET/P` across the island's cells | cells fall on the Budyko curve without being told it exists | RMSE < 0.10 |
 | **Orographic ratio** — windward:leeward annual precipitation on a 1500 m island | 5×–20× | within range |
 | **Seasonal ocean lag** — SST maximum after insolation maximum | 6–10 weeks | ±3 weeks |
-| **Diurnal convergence cloud** over the summit on calm days | present in >60 % of tropical calm days | frequency |
+| **Diurnal convergence cloud** — cap cloud peaks *after* solar noon and dissolves overnight | peak 0–7 h after noon; overnight mean < 60 % of peak | **implemented, passing** |
+| **Diurnal land temperature range** — land swings, ocean does not | 3–35 K over land | **implemented, passing** |
+| **Wind is mean-reverting, not a random walk** | bounded over 40 simulated days, non-zero variance | **implemented, passing** |
+| **The fast clock opens no budget** | ledger residuals unchanged over 200 ticks | **implemented, passing** |
 | **Precipitation–temperature scaling** of extreme events | ~7 %/K (Clausius–Clapeyron rate) | ±3 %/K |
 
 ## Ecology

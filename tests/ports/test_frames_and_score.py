@@ -36,6 +36,29 @@ def test_frame_hash_chain_is_order_dependent(island):
     assert f.frame_hash(seed, b"\x00" * 32) != f.frame_hash(seed, b"\x01" * 32)
 
 
+def test_appending_a_field_does_not_move_the_others():
+    """The append-only rule is what lets a 2140 reader parse a frame written now
+    (docs/04 §6).  A field added at the end must leave every earlier field at the
+    same byte offset."""
+    import struct
+    from kernel.ports import state_frame as sf
+
+    values = {name: float(i + 1) for i, name in enumerate(sf.DELTA_FIELDS)}
+    frame = DeltaFrame(tick=1, sim_time_s=2.0, island_id=3, values=values)
+    blob = frame.canonical_bytes(b"\x11" * 32, b"\x22" * 32)
+
+    header = 4 + 2 + 3 + 2 + 32 + 8 + 8 + 1 + 32
+    for i, name in enumerate(sf.DELTA_FIELDS):
+        got, = struct.unpack_from("<d", blob, header + 8 * i)
+        assert got == values[name], f"{name} moved to a different offset"
+
+    # An older reader that knows only the first 30 fields still gets them right.
+    legacy = sf.DELTA_FIELDS[:30]
+    for i, name in enumerate(legacy):
+        got, = struct.unpack_from("<d", blob, header + 8 * i)
+        assert got == values[name]
+
+
 def test_event_flags_round_trip():
     names = ["speciation", "eruption", "fire"]
     assert sorted(unpack_events(pack_events(names))) == sorted(names)

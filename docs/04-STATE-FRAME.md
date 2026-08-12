@@ -21,6 +21,10 @@ Design rules:
 3. **Verifiable.** Every frame carries its own hash and links to its predecessor.
 4. **Boring.** CBOR (RFC 8949) with deterministic encoding, plus a documented plain-binary
    layout for the embedded delta path. No bespoke compression in the archival path.
+5. **Hashed with BLAKE2b-256** (RFC 7693), not with something newer. It is specified in an
+   RFC, it is in the Python standard library, it is in every serious crypto library, and it
+   is overwhelmingly likely to still be implementable from its written specification in two
+   hundred years. Longevity beats fashion, and this is a hash that has to outlive us.
 
 ## 2. Two frame kinds
 
@@ -43,10 +47,10 @@ genesis_seed  u8[32]          the Soul (docs/01 §5)
 tick          u64             ticks since ignition
 sim_time      f64             sim-seconds since ignition
 frame_kind    u8             0 = delta, 1 = full
-prev_hash     u8[32]          BLAKE3 of previous frame of the same kind
+prev_hash     u8[32]          BLAKE2b-256 of previous frame of the same kind
 payload_len   u32
 payload       …
-frame_hash    u8[32]          BLAKE3 over everything above
+frame_hash    u8[32]          BLAKE2b-256 over everything above
 ```
 
 `chain_hash` is maintained separately by the provenance port as a Merkle root over full
@@ -116,6 +120,10 @@ island.
 ## 6. Compatibility rules
 
 - **Never remove or reorder a field.** Deprecate by documentation only.
+  *History:* `SF/1` shipped 30 delta fields at kernel 0.1; `convective_cloud` and
+  `squall` were appended at kernel 0.2 for the fast clock. A 0.1 reader still parses a
+  0.2 frame correctly up to field 30 and reports the remainder as unknown, which is the
+  compatibility rule working as intended rather than a version break.
 - **New fields append**, with a defined value meaning "not produced by this kernel".
 - A reader encountering `sf_version` greater than it knows must read the fields it
   recognises and report the remainder as unknown rather than failing.

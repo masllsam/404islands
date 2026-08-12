@@ -199,6 +199,66 @@ def build(island, cell_px: int = 3, cols: int = 4, pad: int = 12,
     return img
 
 
+def day_sheet(island, frames: int = 12, width: int = 320, height: int = 200,
+              pad: int = 8, header: int = 20, cols: int = 4, **render_kw) -> np.ndarray:
+    """One simulated day, rendered at regular intervals, as a contact sheet.
+
+    The single most direct answer to "is it actually running": the sun crosses,
+    the land heats, the sea breeze builds its cap cloud through the afternoon and
+    lets it go after dark, and the sky drifts at whatever wind the island has
+    today.  None of that is keyframed -- it is the fast clock (docs/03b §5).
+
+    Advances the island by exactly one day, so the caller gets a piece whose
+    clock has moved on, as it would have anyway.
+    """
+    from .render import Renderer
+    from ..atmos.weather import TICKS_PER_DAY
+
+    step_ticks = max(TICKS_PER_DAY // frames, 1)
+    tiles = []
+    for _ in range(frames):
+        island.step_fast(step_ticks)
+        f = island.delta_frame().values
+        hour = (island.state.sim_days % 1.0) * 24.0
+        img = Renderer(island, width=width, height=height, **render_kw).render()
+        tiles.append((hour, f, img))
+
+    rows = (frames + cols - 1) // cols
+    W = cols * width + (cols + 1) * pad
+    H = rows * (height + header) + (rows + 1) * pad + 30
+    sheet = np.full((H, W, 3), 10, dtype=np.uint8)
+
+    for k, (hour, f, img) in enumerate(tiles):
+        r, c = divmod(k, cols)
+        x0 = pad + c * (width + pad)
+        y0 = pad + 26 + r * (height + header + pad)
+        draw_text(sheet, x0, y0,
+                  f"{int(hour):02d}:{int((hour % 1) * 60):02d}   "
+                  f"SUN {f['sun_elevation_deg']:+.0f}   "
+                  f"CLOUD {f['cloud_frac']:.2f}   "
+                  f"T {f['t_air_mean_c']:.0f}C   "
+                  f"WIND {f['wind_speed_ms']:.0f}",
+                  colour=(196, 186, 150))
+        sheet[y0 + header:y0 + header + height, x0:x0 + width] = img
+
+    d = island.diagnostics
+    draw_text(sheet, pad, 9,
+              f"ONE SIMULATED DAY   ISLAND {island.cfg.island_id:03d}   "
+              f"YEAR {island.state.year:.0f}   "
+              f"LAT {island.cfg.latitude_deg:.1f}   "
+              f"LAND {d.get('land_area_km2', 0):.1f} KM2   "
+              f"SST {d.get('sst_c', 0):.1f} C",
+              colour=(226, 214, 170))
+    return sheet
+
+
+def write_day_sheet(island, path, **kw) -> str:
+    from . import png
+
+    png.write(path, day_sheet(island, **kw))
+    return path
+
+
 def write(island, path, **kw) -> str:
     from . import png
 

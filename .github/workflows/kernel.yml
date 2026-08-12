@@ -23,6 +23,10 @@ jobs:
       - name: conservation ledger (strict)
         run: python -m kernel.cli --years 8 --grid 48 --cell 380 --genesis 200000 --strict --quiet
 
+      # The display: the artwork's primary surface (docs/09).
+      - name: render and atlas ports
+        run: python -m pytest tests/ports -q
+
       # The laws the island was never taught (docs/03f).  Slow; still a gate.
       - name: emergent laws
         run: python -m pytest tests/emergent -q

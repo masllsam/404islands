@@ -194,3 +194,86 @@ def test_phosphorus_only_comes_from_rock():
     from kernel.bio.vegetation import weathering_p_release
     assert weathering_p_release(0.0) == 0.0
     assert weathering_p_release(1e-4) > 0.0
+
+
+# ------------------------------------------------------- the fast clock (03b §5)
+
+@pytest.fixture(scope="module")
+def diurnal():
+    """One simulated day, sampled every 15 minutes."""
+    from kernel.atmos import weather
+    cfg = IslandConfig(seed=seed_from_phrase("island-001"), nx=64, ny=64,
+                       cell_size_m=320.0, genesis_years=400000.0)
+    isl = Island(cfg)
+    for _ in range(10):
+        isl.step_year()
+    isl.state.sim_days = float(int(isl.state.sim_days))
+    trace = []
+    for _ in range(weather.TICKS_PER_DAY):
+        isl.step_fast(1)
+        w = isl.weather
+        trace.append({
+            "hour": (isl.state.sim_days % 1.0) * 24.0,
+            "sun": isl.delta_frame().values["sun_elevation_deg"],
+            "t_land": w.t_land_mean_k,
+            "contrast": w.land_sea_contrast_k,
+            "cap": w.convective_cloud,
+        })
+    return isl, trace
+
+
+def test_land_heats_and_cools_while_the_ocean_does_not(diurnal):
+    """A 50 m mixed layer has ~10,000x the heat capacity of the land skin."""
+    isl, trace = diurnal
+    t = np.array([r["t_land"] for r in trace])
+    assert (t.max() - t.min()) > 3.0, "no diurnal cycle over land"
+    assert (t.max() - t.min()) < 35.0, "implausible diurnal range"
+    # The ocean must not follow it.
+    assert abs(isl.weather.land_sea_contrast_k) < 30.0
+
+
+def test_cap_cloud_peaks_in_the_afternoon(diurnal):
+    """The sea-breeze cloud lags its forcing: it peaks *after* solar noon and
+    dissolves after dark.  A cloud that peaked at noon would mean the lag was
+    not being integrated; one that never dissolved would mean the decay was not."""
+    _, trace = diurnal
+    hours = np.array([r["hour"] for r in trace])
+    cap = np.array([r["cap"] for r in trace])
+    sun = np.array([r["sun"] for r in trace])
+
+    peak_hour = float(hours[int(np.argmax(cap))])
+    noon_hour = float(hours[int(np.argmax(sun))])
+    assert cap.max() > 0.25, f"no cap cloud formed (max {cap.max():.2f})"
+    assert peak_hour >= noon_hour, (peak_hour, noon_hour)
+    assert peak_hour - noon_hour < 7.0, (peak_hour, noon_hour)
+
+    night = cap[(hours < 5.0) | (hours > 21.0)]
+    assert night.mean() < 0.6 * cap.max(), "cap cloud did not dissolve overnight"
+
+
+def test_fast_clock_does_not_open_a_budget(diurnal):
+    """The boundary layer is diagnostic; stepping the weather must not create or
+    destroy anything (docs/03b §6)."""
+    isl, _ = diurnal
+    before = {k: v["residual_accum"] for k, v in isl.ledger.audit().items()}
+    for _ in range(200):
+        isl.step_fast(1)
+    after = {k: v["residual_accum"] for k, v in isl.ledger.audit().items()}
+    assert before == after
+
+
+def test_weather_is_variable_but_bounded():
+    """Ornstein-Uhlenbeck, not a random walk: the wind must wander and come back."""
+    from kernel.atmos import weather
+    cfg = IslandConfig(seed=seed_from_phrase("weather"), nx=48, ny=48,
+                       cell_size_m=420.0, genesis_years=250000.0)
+    isl = Island(cfg)
+    isl.step_year()
+    winds = []
+    for _ in range(weather.TICKS_PER_DAY * 40):     # 40 simulated days
+        isl.step_fast(1)
+        winds.append(isl.weather.wind_speed_ms)
+    w = np.array(winds)
+    assert 1.0 < w.mean() < 20.0, w.mean()
+    assert w.std() > 0.5, "wind never varies"
+    assert w.max() < 34.0 and w.min() > 0.3, (w.min(), w.max())

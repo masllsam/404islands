@@ -454,10 +454,22 @@ class Renderer:
         elev = _bilinear(np.maximum(st.z - st.sea_level, 0.0), fx, fy)
         lift = lift * np.clip(elev / 260.0, 0.0, 1.0)
 
+        # The cap is only as strong as the sea breeze made it *this afternoon*:
+        # the precipitation field says where uplift happens, the fast clock says
+        # how much of it is currently condensed (docs/03b §5).  Before this the
+        # cap was a fixed feature of the climatology and the island looked the
+        # same at dawn as at four in the afternoon.
+        cap_now = float(frame.get("convective_cloud", 0.0))
+        lift = lift * (0.18 + 1.5 * cap_now)
+
         # Trade cloud: the noise field, advected downwind at the simulated wind.
         # Sampled with wrap so the sky continues past the domain -- a rectangle
         # of cloud ending in mid-air reads as a bug, and is one.
-        u, v = isl._trade_wind()
+        # Advect at the wind the island actually has right now, not the
+        # climatological trade: on a slack day the sky barely moves.
+        speed = float(frame.get("wind_speed_ms", 7.0))
+        theta = np.deg2rad(float(frame.get("wind_dir_deg", 0.0)))
+        u, v = speed * float(km.sin(theta)), speed * float(km.cos(theta))
         drift = st.sim_days * 86400.0 * 0.0022
         tex = self._cloud_texture()
         ny, nx = tex.shape
@@ -467,7 +479,9 @@ class Renderer:
 
         # Threshold the noise so coverage matches the frame's cloud fraction:
         # broken trade cumulus with clear sky between, not a uniform veil.
-        base = float(np.clip(frame["cloud_frac"], 0.0, 1.0))
+        # Coverage from the trade deck alone, not the total: the cap is drawn by
+        # its own term and counting it twice fills the sky.
+        base = float(np.clip(frame["cloud_frac"] - 0.6 * cap_now, 0.02, 1.0))
         lo, hi = np.percentile(tex, [100.0 * (1.0 - base), 100.0])
         broken = np.clip((n - lo) / max(hi - lo, 1e-6), 0.0, 1.0) ** 0.8
 

@@ -48,6 +48,9 @@ def build_parser() -> argparse.ArgumentParser:
                    help="write the scene as a PNG (the artwork's primary view)")
     p.add_argument("--atlas", type=str, default=None,
                    help="write the field atlas as a PNG: every simulated field, labelled")
+    p.add_argument("--day-sheet", type=str, default=None,
+                   help="render one simulated day as a contact sheet of frames")
+    p.add_argument("--day-frames", type=int, default=12)
     p.add_argument("--image-size", type=str, default="960x600")
     p.add_argument("--hour", type=float, default=None,
                    help="time of day for the image, 0..24 (default: whatever time it is)")
@@ -121,6 +124,14 @@ def main(argv=None) -> int:
             atlas.write(island, args.atlas)
             if not args.quiet:
                 print(f"wrote {args.atlas}")
+
+    if args.day_sheet:
+        from .ports import atlas
+        t3 = time.time()
+        atlas.write_day_sheet(island, args.day_sheet, frames=args.day_frames)
+        if not args.quiet:
+            print(f"wrote {args.day_sheet}  "
+                  f"({args.day_frames} frames, {time.time() - t3:.1f} s)")
 
     if not args.quiet:
         print()

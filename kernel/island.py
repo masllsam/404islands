@@ -16,7 +16,7 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
-from .atmos import energy, orbital, orographic, thermo
+from .atmos import energy, orbital, orographic, thermo, weather
 from .bio import vegetation
 from .bio.vegetation import TRAIT_BOUNDS, TRAIT_NAMES, Lineage, Vegetation
 from .evo.genetics import Evosphere, region_map
@@ -84,6 +84,7 @@ class Island:
         self.veg = Vegetation(self.grid)
         self.evo = Evosphere(config.seed, self.grid)
         self.hasher = ChainHasher()
+        self.weather = weather.WeatherState()
         self.input_log: list[tuple[int, str, str]] = []
 
         self.state = self._genesis()
@@ -275,6 +276,32 @@ class Island:
             return (-7.0 * float(km.cos(np.deg2rad(lat * 3.0))), 1.5)
         return (9.0, -1.0)
 
+    # -------------------------------------------------------------- fast clock
+
+    def step_fast(self, n_ticks: int = 1) -> list[str]:
+        """Advance the T_FAST clock: 15 simulated minutes a tick (docs/02 §4).
+
+        This is the clock the viewer actually watches.  The slow clocks decide
+        what the island *is*; this one decides what it is *doing* -- the sun
+        crossing, the afternoon cloud building over the summit and dissolving
+        after dark, a shower arriving, the wind going slack for three days.
+
+        It carries no storage of its own, so it cannot open a budget: the
+        boundary layer is diagnosed from state the slow clocks already conserved
+        (docs/03b §6).
+        """
+        st = self.state
+        events: list[str] = []
+        for _ in range(max(int(n_ticks), 1)):
+            st.tick += 1
+            st.sim_days += 1.0 / weather.TICKS_PER_DAY
+            before_squall = self.weather.squall
+            weather.step(self.weather, self, st.tick, n_ticks=1)
+            if self.weather.squall > 0.5 > before_squall:
+                events.append("shower")
+        st.events_this_step = events
+        return events
+
     # -------------------------------------------------------------- fast step
 
     def _bio_env(self) -> dict:
@@ -433,8 +460,12 @@ class Island:
              + float(ksum_fast(self.veg.soil.total_c()))) * g.cell_area_m2)
         self.ledger.close_step(st.tick)
 
+        weather.step(self.weather, self, st.tick, n_ticks=1)
         self.diagnostics = {
             **bio,
+            "cloud": weather.total_cloud(self.weather),
+            "wind_ms": self.weather.wind_speed_ms,
+            "land_sea_contrast_k": self.weather.land_sea_contrast_k,
             "lens_volume_m3": lens_volume,
             "land_area_km2": land_area_km2,
             "species": self.evo.species_count(self.veg),
@@ -545,16 +576,15 @@ class Island:
             "moon_elevation_deg": 40.0 * float(km.sin(2.0 * np.pi * (day % 1.0) + np.pi)),
             "sky_luminance": lum,
             "sky_colour_temp_k": cct,
-            "cloud_frac": float(np.clip(self.diagnostics.get("precip_mean_mm", 0.0) / 3000.0,
-                                        0.05, 0.95)),
-            "precip_rate_mm_h": float(self.diagnostics.get("precip_mean_mm", 0.0) / 8760.0),
-            "wind_speed_ms": float(abs(self._trade_wind()[0])),
-            "wind_dir_deg": float(np.rad2deg(km.atan2(*self._trade_wind())) % 360.0),
-            "t_air_mean_c": float(g.mean(np.asarray(self._bio_env()["t_air_k"]), land)) - T0
-            if np.any(land) else self.ocean.sst_c,
-            "t_range_c": 6.0,
+            "cloud_frac": weather.total_cloud(self.weather),
+            "convective_cloud": self.weather.convective_cloud,
+            "precip_rate_mm_h": self.weather.precip_rate_mm_h,
+            "wind_speed_ms": self.weather.wind_speed_ms,
+            "wind_dir_deg": float(np.rad2deg(self.weather.wind_dir_rad) % 360.0),
+            "t_air_mean_c": self.weather.t_land_mean_k - T0,
+            "t_range_c": self.weather.t_land_range_k,
             "sst_c": self.ocean.sst_c,
-            "sea_state": float(np.clip(abs(self._trade_wind()[0]) / 3.0, 0.0, 9.0)),
+            "sea_state": float(np.clip(self.weather.wind_speed_ms / 3.0, 0.0, 9.0)),
             "tide_phase": orbital.tide_phase(day),
             "lake_stage_norm": float(np.clip(np.max(self.net.lake_depth) / 40.0, 0.0, 1.0)),
             "river_discharge_norm": float(np.clip(
@@ -566,6 +596,7 @@ class Island:
             "senescence_index": 0.0,
             "npp_norm": float(np.clip(npp / 1.0e8, 0.0, 1.0)),
             "fire_activity": float(getattr(self, "fire_activity", 0.0)),
+            "squall": self.weather.squall,
             "population_stress": float(1.0 - self.evo.mean_heterozygosity()),
             "season_phase": float((day % DAYS_PER_YEAR) / DAYS_PER_YEAR),
             "year_fraction": float((day % DAYS_PER_YEAR) / DAYS_PER_YEAR),
