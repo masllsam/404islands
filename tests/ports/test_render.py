@@ -23,7 +23,12 @@ def island():
     isl = Island(IslandConfig(seed=seed_from_phrase("render"), **SMALL))
     for _ in range(8):
         isl.step_year()
+    # Run a simulated day so the cloud field exists: the renderer samples the
+    # kernel's advected cloud, and testing it against the scalar fallback would
+    # be testing the degenerate path nobody ships.
+    isl.step_fast(96)
     assert int((isl.state.z > isl.state.sea_level).sum()) > 100, "fixture built no island"
+    assert isl.weather.cloud_water is not None
     return isl
 
 
@@ -65,14 +70,25 @@ def test_night_is_dark_and_noon_is_not(island):
 
 def test_sun_moves_the_shadows(island):
     """Two different times of day must produce materially different images --
-    otherwise the light is not coming from the orbital solution."""
-    morning = Renderer(_at_hour(island, 8.0), width=120, height=80).render().astype(int)
-    evening = Renderer(_at_hour(island, 16.0), width=120, height=80).render().astype(int)
-    # Measure where the island is.  Over the whole frame the difference is
-    # diluted by sea and sky, which are near-symmetric about noon -- and a
-    # whole-frame threshold would then be testing the sky, not the shadows.
-    crop = (slice(30, 70), slice(35, 95))
-    assert np.abs(morning[crop] - evening[crop]).mean() > 7.0
+    otherwise the light is not coming from the orbital solution.
+
+    The weather is deliberately *not* stepped between the two renders, so the
+    only thing that differs is where the sun is.
+    """
+    morning = Renderer(_at_hour(island, 8.0), width=120, height=80).render().astype(float)
+    evening = Renderer(_at_hour(island, 16.0), width=120, height=80).render().astype(float)
+
+    # Test the claim directly rather than "the images differ".  At 08:00 and
+    # 16:00 the sun has the same elevation and mirrored azimuth, so the lit and
+    # shaded flanks must swap sides.  A brightness *difference* threshold would
+    # instead be measuring how much cloud happened to be in frame.
+    def asymmetry(img):
+        crop = img[30:70, 35:95]
+        half = crop.shape[1] // 2
+        return float(crop[:, :half].mean() - crop[:, half:].mean())
+
+    a, b = asymmetry(morning), asymmetry(evening)
+    assert a * b < 0.0 or abs(a - b) > 4.0, (a, b)
 
 
 def test_land_is_greener_than_open_water(island):

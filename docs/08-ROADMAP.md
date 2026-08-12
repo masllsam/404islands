@@ -58,8 +58,16 @@ No milestone is "infrastructure only".
       afternoon cap cloud with its build and decay lags, showers, and Ornstein-Uhlenbeck
       wind and synoptic state. Two new delta-frame fields; kernel 0.2.
 - [x] **The day sheet** — one simulated day as a contact sheet (`--day-sheet`).
-- [ ] Per-cell weather fields rather than island-mean scalars, so a squall can cross the
-      island instead of covering it.
+- [x] **Per-cell weather fields** — condensed cloud water and precipitation as arrays, so
+      a squall crosses the island instead of covering it, and so the display samples the
+      kernel's cloud rather than generating its own. The last place the image invented
+      something is closed.
+- [ ] Cloud deck art direction: draw it with interior structure rather than as a single
+      displaced surface, so a developed cap cloud reads as cumulus with holes in it rather
+      than as a lid. The midday view is currently over-obscured (`docs/09` §2.1.2).
+- [ ] Couple fast-clock precipitation into the water budget, so the shower you watch is
+      the drop the river carries. Needs the daily hydrology (`T_DAY`) to become prognostic
+      first, and the ledger has to keep closing across the change.
 - [ ] Least-cost-path deme partition over real topography, so a newly-cut canyon physically
       isolates two populations.
 - [ ] Individual-based genetics below Nₑ = 500 (currently analytic everywhere).
@@ -147,6 +155,8 @@ Numbers from the Milestone-1 kernel, recorded here so regressions are visible.
 | Diurnal land temperature range, 4 km tropical island | **24.1 → 30.8 °C** | 5–10 K typical |
 | Cap cloud, same island | **0.05 → 0.54, peak 14:00** | peaks 1–4 h after solar noon |
 | Scene render | ~10 s a frame at 1100×690 (NumPy) | GPU shader, Milestone 3 |
+| Fast clock | **0.6 s per simulated day** (96 ticks, 64² grid) | must not dominate the year |
+| Shower footprint | **< 50 % of the domain**, gated by test | showers are local |
 
 **A finding worth recording:** at 15 km domains with 200 kyr of construction, roughly half
 of all seeds never break the surface at all — they stay guyots. Emergence is not the

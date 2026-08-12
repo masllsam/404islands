@@ -277,3 +277,69 @@ def test_weather_is_variable_but_bounded():
     assert 1.0 < w.mean() < 20.0, w.mean()
     assert w.std() > 0.5, "wind never varies"
     assert w.max() < 34.0 and w.min() > 0.3, (w.min(), w.max())
+
+
+def test_cloud_field_is_the_field_the_frame_reports():
+    """The picture, the rain and the reported cloud fraction are one array.
+
+    Before the fast clock carried a spatial field, the renderer generated its own
+    cloud texture -- which made the clouds the only thing on the display that did
+    not trace to a state variable, and let the number disagree with the picture.
+    """
+    from kernel.atmos import weather
+    cfg = IslandConfig(seed=seed_from_phrase("island-001"), nx=64, ny=64,
+                       cell_size_m=320.0, genesis_years=400000.0)
+    isl = Island(cfg)
+    for _ in range(8):
+        isl.step_year()
+    isl.step_fast(60)
+
+    w = isl.weather
+    assert w.cloud_water is not None and w.cloud_water.shape == isl.grid.shape
+    reported = isl.delta_frame().values["cloud_frac"]
+    assert abs(reported - weather.total_cloud(w)) < 1e-12
+
+    # Rain falls only under loaded cloud, never from clear sky.
+    raining = w.precip_field_mm_h > 0.0
+    if bool(np.any(raining)):
+        assert float(w.cloud_water[raining].min()) > 0.5
+    assert float(w.precip_field_mm_h[~raining].max(initial=0.0)) == 0.0
+
+
+def test_showers_are_local_not_global():
+    """A squall must cross the island, not cover it.
+
+    With scalar weather every cell got the same rain at the same instant, which
+    is the one thing island rain never does.
+    """
+    cfg = IslandConfig(seed=seed_from_phrase("island-001"), nx=64, ny=64,
+                       cell_size_m=320.0, genesis_years=400000.0)
+    isl = Island(cfg)
+    for _ in range(8):
+        isl.step_year()
+
+    wettest = None
+    for _ in range(96):
+        isl.step_fast(1)
+        p = isl.weather.precip_field_mm_h
+        if float(p.max()) > 0.5 and (wettest is None or p.max() > wettest.max()):
+            wettest = p.copy()
+
+    if wettest is None:
+        pytest.skip("no shower on this simulated day")
+    wet_fraction = float((wettest > 0.1).mean())
+    assert 0.0 < wet_fraction < 0.5, f"rain covered {wet_fraction:.0%} of the domain"
+
+
+def test_cloud_advects_with_the_wind():
+    """The sky must move, and move downwind."""
+    cfg = IslandConfig(seed=seed_from_phrase("weather"), nx=48, ny=48,
+                       cell_size_m=420.0, genesis_years=250000.0)
+    isl = Island(cfg)
+    isl.step_year()
+    isl.step_fast(8)
+    before = isl.weather.cloud_water.copy()
+    isl.step_fast(8)
+    after = isl.weather.cloud_water
+    assert not np.array_equal(before, after), "the sky never moved"
+    assert np.abs(after - before).mean() > 1e-4

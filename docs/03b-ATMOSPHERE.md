@@ -159,6 +159,24 @@ Snow when the wet-bulb temperature is below ~1 °C, with an accumulation/melt mo
   peak at 14:00.
 
   One tuned scalar, `BREEZE_TO_CLOUD`, converts forcing to cover; isolated and labelled.
+
+- **Cloud as a field, not a number** — *implemented.* The deck is a 2-D array of condensed
+  water, composed each tick from two pieces that are each exact rather than integrated:
+  the **airmass** (a cumulus texture sampled at an offset that scrolls at the wind — the
+  cloud that was upwind a moment ago) and the **island's plume** (the orographic and
+  sea-breeze source smeared downwind by six taps with a 5 km decay length, which is the
+  steady-state solution of advection with a sink).
+
+  It is built this way because time-stepping it cannot work at this scale: the air crosses
+  a 20 km island in about forty minutes, so a 15-minute step runs at a Courant number near
+  twenty, and semi-Lagrangian advection there is so diffusive it smears the sky into
+  streaks and then accumulates source until the island disappears under a lid. Both were
+  observed. Memory lives in `convective_cloud`, which carries the build and decay lags.
+
+  Consequences: rain falls **where** the cloud is loaded past its precipitation threshold,
+  so a shower crosses the island rather than covering it; the cap cloud trails a plume to
+  leeward; and the delta frame's `cloud_frac` is literally the mean of the array the
+  display samples, so the number and the picture cannot disagree.
 - **Tropical cyclones**: genesis conditioned on SST > 26.5 °C, sufficient mid-level
   humidity, low shear, and latitude > 5°; intensity capped by potential intensity theory
   (Emanuel 1986) from SST and outflow temperature. Passage delivers extreme wind and rain,
@@ -175,6 +193,8 @@ Snow when the wet-bulb temperature is below ~1 °C, with an accumulation/melt mo
 | Slab ocean, no dynamic currents | no ENSO-like variability | a prescribed interannual oscillator is a Milestone-3 addition |
 | Fast-clock boundary layer is diagnostic, with no heat storage | no nocturnal inversion, no fog | its inertia is negligible beside the mixed layer's at a 15-minute step, and a reservoir we could not close would open the energy budget for a detail nobody can see |
 | Sea-breeze convergence is a bulk index, not a resolved circulation | no wind field, no breeze front position | the domain cannot resolve the circulation; the cloud it produces is validated against its observed timing instead |
+| Cloud field is composed, not integrated | no cloud memory beyond the `convective_cloud` lag; no genuine cloud advection across the domain | the alternative at CFL ~20 is numerical diffusion that destroys the field entirely; the composed form is exact and the lag supplies the memory |
+| Fast-clock precipitation is diagnostic | the water budget still runs on the annual climatology, so the shower you watch is not the drop the river carries | the *pattern* is the same field, so they agree in space and differ only in instantaneous timing; coupling them is the next step (docs/08) |
 | Aerosols and chemistry absent | no volcanic-haze radiative forcing | eruption-driven forcing is a planned addition; the coupling matters for the object |
 
 ## 7. References

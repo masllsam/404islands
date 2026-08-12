@@ -49,7 +49,8 @@ Every element traces to a state variable. Nothing is decorative invention:
 | Sea colour | depth, by Beer's-law extinction |
 | The turquoise rim | `reef_thickness` where coral actually accreted |
 | Cap cloud over the summit | orographic uplift, scaled by how much the *sea breeze has condensed this afternoon* — so the island looks different at dawn and at four o'clock. It rides *over* the ridge that lifts it |
-| Broken trade cloud | coverage from the frame's cloud fraction, advected downwind at the simulated wind speed |
+| Every cloud in the frame | `weather.cloud_water`, the kernel's own field — the same array the rain falls out of and the shadows are cast from. The renderer no longer generates a cloud texture of its own; it samples state, like everything else |
+| Dark undersides and rain veils | `weather.precip_field_mm_h` under that patch of deck |
 | Cloud shadows crossing land and water | the same cloud field, sampled along the sun ray |
 | Snow | terrain above the freezing level from the actual lapse rate |
 | Surf at the shoreline | depth and sea state |
@@ -93,6 +94,23 @@ a skeleton watch. It is where the object stops being beautiful and starts being 
 python -m kernel.cli --seed island-001 --years 30 --post-shield 300000 \
     --hour 8.5 --image scene.png --atlas atlas.png --image-size 1000x625
 ```
+
+### 2.1.2 Known-open: the deck at midday
+
+On an afternoon when the sea breeze has fully developed, the cap cloud covers the island
+almost completely. That is what a real tropical island does — and it is a poor default view
+for an object whose purpose is to be looked at.
+
+The renderer carries one declared presentation constant for this, `Renderer.cloud_gain`,
+which scales how much of the simulated cloud water the deck actually paints. It changes
+nothing in the simulation: the frame's cloud fraction is still the mean of the field, and
+the rain still falls where the field says it does. It is documented here rather than tuned
+quietly, and the honest state of it is that at 0.38 the midday island is still more
+obscured than it should be.
+
+The real fix is art direction on the deck, not a smaller number: a cumulus field is mostly
+holes, and ours is drawn as a single displaced surface with no interior structure, so it
+occludes like a lid rather than like cloud. Open work.
 
 ## 3. Art direction
 

@@ -178,10 +178,16 @@ class Renderer:
         self.shadow_steps = shadow_steps
         self.refine = 8
         self.exposure = 1.35
-        # How much of the simulated cloud fraction the deck actually paints.
-        # The full field would be meteorologically right and would also hide the
-        # island for days at a time; the piece exists to be looked at.
-        self.cloud_gain = 0.55
+        # How much of the simulated cloud water the deck actually paints.
+        #
+        # The full field is meteorologically right and, on a developed
+        # afternoon, socks the island in completely -- which is what a real
+        # tropical island does and a poor thing for an object whose purpose is
+        # to be looked at.  This is the declared presentation knob for that
+        # trade, the only one in the renderer, and it changes nothing about the
+        # simulation: the cloud fraction the frame reports is still the mean of
+        # the field, and the rain still falls where the field says.
+        self.cloud_gain = 0.38
 
     # --------------------------------------------------------------- sampling
 
@@ -356,140 +362,99 @@ class Renderer:
             col = col + np.array([0.020, 0.024, 0.038])[None, :] * night * np.clip(up, 0, 1)[:, None]
         return col
 
-    def _cloud_texture(self):
-        """Broken-cloud pattern, advected downwind.
+    def _cloud_base(self) -> float:
+        """Cloud base = lifting condensation level of the marine boundary layer."""
+        z = float(thermo.lifting_condensation_level(self.island.ocean.sst_k + 1.0, 0.78))
+        return float(np.clip(z, 550.0, 2400.0))
 
-        Cached per render.  Deterministic in the island's seed, so two people
-        watching the same island at the same tick see the same sky -- clouds are
-        state, not decoration.
+    _cloud_slope = None
+
+    def _cloud_amount(self, fx, fy, frame, st):
+        """Condensed water on the deck, sampled from the simulation.
+
+        This used to be a noise texture the renderer generated for itself, which
+        made the clouds the one thing in the picture that did not trace to a
+        state variable (AGENTS.md R5).  They are now the kernel's advected cloud
+        field: the same array that decides where it rains, that the cloud
+        shadows are cast from, and that the delta frame's cloud fraction is the
+        mean of.  A cloud, its shadow, and the rain under it can no longer
+        disagree, because they are the same number.
         """
-        if getattr(self, "_cloud_tex", None) is not None:
-            return self._cloud_tex
-        from ..geo import noise
-        from ..substrate.rng import Stream
+        w = getattr(self.island, "weather", None)
+        field = getattr(w, "cloud_water", None) if w is not None else None
+        if field is None:
+            # No fast clock has run: fall back to the frame's scalar so a
+            # freshly-ignited island still draws a sky.
+            base = float(np.clip(frame.get("cloud_frac", 0.3), 0.0, 1.0))
+            flat = np.full(fx.shape, base * 0.55 * self.cloud_gain)
+            return flat, np.zeros_like(flat)
 
-        s = Stream(self.island.cfg.seed, "atmos", 0, stream=91)
-        base = 0.5 + 0.5 * noise.fbm(self.grid, s, octaves=5, frequency=2.6)
-        # Mirror-tile it.  The sky has to continue past the domain, and wrapping
-        # a non-periodic field leaves straight seams across the clouds -- which
-        # is exactly what it looked like: a rectangle of weather.
-        row = np.concatenate([base, base[:, ::-1]], axis=1)
-        tex = np.concatenate([row, row[::-1, :]], axis=0)
-        self._cloud_tex = tex
-        return tex
+        amount = np.clip(_bilinear(field, fx, fy) / 0.62, 0.0, 1.0)
+
+        # The simulated weather has a finite footprint.  Bilinear sampling
+        # clamps outside it, which repeats the edge row all the way to the
+        # horizon and draws hard diagonal bands across the sky -- so fade it out
+        # instead.  A viewer sees the island's own weather with clear air beyond,
+        # which is the honest picture: we do not simulate the next 200 km.
+        ny, nx = field.shape
+        inset = np.minimum(np.minimum(fx, nx - 1 - fx), np.minimum(fy, ny - 1 - fy))
+        e = np.clip(inset / (0.22 * min(nx, ny)), 0.0, 1.0)
+        amount = amount * (e * e * (3.0 - 2.0 * e))
+
+        # Slope of the deck's top, from the field's own gradient.  Without it the
+        # cloud is flat white and reads as a lid over the island however
+        # correct its opacity is; with it, the lumps have a sunward side and
+        # cumulus look like cumulus.
+        d = 1.0
+        gx = (_bilinear(field, fx + d, fy) - _bilinear(field, fx - d, fy)) * 0.5
+        gy = (_bilinear(field, fx, fy + d) - _bilinear(field, fx, fy - d)) * 0.5
+        self._cloud_slope = (gx, gy)
+        # "lift" here is what the deck is raining, used to darken its underside.
+        rain = getattr(w, "precip_field_mm_h", None)
+        wet = (np.clip(_bilinear(rain, fx, fy) / 8.0, 0.0, 1.0)
+               if rain is not None else np.zeros_like(amount))
+        return amount * self.cloud_gain, wet
 
     def _clouds(self, origin, dirs, occluder_t, frame, st):
-        """The cloud deck, at the computed lifting condensation level.
+        """The visible cloud deck, at the computed lifting condensation level.
 
-        Two populations, both from state:
-
-        * **Cap cloud** -- thick, stationary, sitting where the orographic model
-          says air is rising.  This is the plume that hangs over a tropical
-          island's windward flank all day and is most of why such islands look
-          the way they do from the sea.
-        * **Broken trade cloud** -- a noise field advected downwind at the
-          simulated wind speed, with coverage set by the frame's cloud fraction.
-
-        Getting the opacity wrong here is not a cosmetic error: an earlier
-        revision painted an 88%-opaque deck over the whole domain and hid the
-        island completely.
+        The deck is given a displaced top -- thicker cloud stands higher -- by a
+        short fixed point, so a trade cumulus field reads as cumulus rather than
+        as fog lying on the water.  Two passes are enough; the third is there
+        because cloud sitting on a ridge moves the surface it is sampled from.
         """
-        isl = self.island
         z_base = self._cloud_base()
         depth_m = 900.0        # cumulus have vertical extent; a plane does not
 
         dz = dirs[:, 2]
         safe = np.abs(dz) > 1e-4
 
-        # Two-step fixed point on a *displaced* deck: the cloud top rises where
-        # there is more cloud water, so the deck gets a lumpy upper surface.  A
-        # flat plane reads as fog lying on the water, which is not what a trade
-        # cumulus field looks like from above.
         z_hit = np.full(dirs.shape[0], z_base)
+        amount = np.zeros(dirs.shape[0])
+        lift = np.zeros(dirs.shape[0])
         for _ in range(3):
             t = np.where(safe, (z_hit - origin[2]) / np.where(safe, dz, 1.0), -1.0)
             p = origin[None, :] + dirs * np.maximum(t, 0.0)[:, None]
             fx, fy = self._world_to_cell(p[:, 0], p[:, 1])
             amount, lift = self._cloud_amount(fx, fy, frame, st)
-            # Cap cloud rides *over* the ridge that lifts it.  Held at a fixed
-            # altitude it slices through the mountain instead, and the island
-            # reads as half-buried in fog rather than crowned by weather.
+            # Cloud over the island rides *over* the ridge that lifts it.  Held
+            # at a fixed altitude it slices through the mountain instead, and the
+            # island reads as half-buried in fog rather than crowned by weather.
             terrain = _bilinear(np.maximum(st.z - st.sea_level, 0.0), fx, fy)
-            ride = np.maximum(terrain + 220.0 - z_base, 0.0) * np.clip(lift * 2.2, 0.0, 1.0)
+            # Ride gently: lifting the deck hard toward the camera puts its
+            # silhouette across the frame and whites the view out at midday.
+            ride = np.maximum(terrain + 180.0 - z_base, 0.0) * np.clip(amount * 1.5, 0.0, 1.0)
             z_hit = z_base + ride + depth_m * amount
 
         t_cloud = np.where(safe, (z_hit - origin[2]) / np.where(safe, dz, 1.0), -1.0)
         visible = (t_cloud > 0.0) & (t_cloud < occluder_t)
 
-        # Slant path through a slab of finite thickness, so grazing rays see more
-        # cloud and the deck reads as a deck rather than a decal.
-        # Keep the slant gain modest.  It was 2.6 with a 3.5x cap, which drove
-        # peak opacity to 0.97 and buried the island under a white sheet -- the
-        # cloud has to read as weather over a place you can still see.
+        # Keep the slant gain modest.  At 2.6 with a 3.5x cap it drove peak
+        # opacity to 0.97 and buried the island under a white sheet -- the cloud
+        # has to read as weather over a place you can still see.
         slant = np.clip(1.0 / np.maximum(np.abs(dz), 0.20), 1.0, 2.0)
         alpha = np.where(visible, 1.0 - km.exp(-1.5 * amount * slant), 0.0)
         return alpha, lift, visible
-
-    def _cloud_base(self) -> float:
-        """Cloud base = lifting condensation level of the marine boundary layer."""
-        z = float(thermo.lifting_condensation_level(self.island.ocean.sst_k + 1.0, 0.78))
-        return float(np.clip(z, 550.0, 2400.0))
-
-    def _cloud_amount(self, fx, fy, frame, st):
-        """Cloud water on the deck, in cell coordinates.  Shared by the visible
-        deck and by the shadows it throws, so a cloud and its shadow can never
-        disagree."""
-        isl = self.island
-
-        # Cap cloud: only the strongly-rising air, so the plume hugs the summit
-        # instead of tinting the whole sky.
-        precip = _bilinear(isl.annual_precip_mm, fx, fy)
-        pmax = max(float(isl.annual_precip_mm.max()), 1.0)
-        pthr = float(np.percentile(isl.annual_precip_mm, 90))
-        lift = np.clip((precip - pthr) / max(pmax - pthr, 1.0), 0.0, 1.0) ** 1.1
-        # Gate on the terrain that is doing the lifting.  Without this the cap
-        # cloud spreads over open water and buries the island under a white
-        # sheet -- the deck has to sit *on* the mountain, as it does in every
-        # photograph of a tropical island.
-        elev = _bilinear(np.maximum(st.z - st.sea_level, 0.0), fx, fy)
-        lift = lift * np.clip(elev / 260.0, 0.0, 1.0)
-
-        # The cap is only as strong as the sea breeze made it *this afternoon*:
-        # the precipitation field says where uplift happens, the fast clock says
-        # how much of it is currently condensed (docs/03b §5).  Before this the
-        # cap was a fixed feature of the climatology and the island looked the
-        # same at dawn as at four in the afternoon.
-        cap_now = float(frame.get("convective_cloud", 0.0))
-        lift = lift * (0.18 + 1.5 * cap_now)
-
-        # Trade cloud: the noise field, advected downwind at the simulated wind.
-        # Sampled with wrap so the sky continues past the domain -- a rectangle
-        # of cloud ending in mid-air reads as a bug, and is one.
-        # Advect at the wind the island actually has right now, not the
-        # climatological trade: on a slack day the sky barely moves.
-        speed = float(frame.get("wind_speed_ms", 7.0))
-        theta = np.deg2rad(float(frame.get("wind_dir_deg", 0.0)))
-        u, v = speed * float(km.sin(theta)), speed * float(km.cos(theta))
-        drift = st.sim_days * 86400.0 * 0.0022
-        tex = self._cloud_texture()
-        ny, nx = tex.shape
-        sx = np.mod(fx - u * drift / self.grid.cell_size_m, nx - 1.001)
-        sy = np.mod(fy - v * drift / self.grid.cell_size_m, ny - 1.001)
-        n = _bilinear(tex, sx, sy)
-
-        # Threshold the noise so coverage matches the frame's cloud fraction:
-        # broken trade cumulus with clear sky between, not a uniform veil.
-        # Coverage from the trade deck alone, not the total: the cap is drawn by
-        # its own term and counting it twice fills the sky.
-        base = float(np.clip(frame["cloud_frac"] - 0.6 * cap_now, 0.02, 1.0))
-        lo, hi = np.percentile(tex, [100.0 * (1.0 - base), 100.0])
-        broken = np.clip((n - lo) / max(hi - lo, 1e-6), 0.0, 1.0) ** 0.8
-
-        # No domain-edge fade is needed: the cap term is already island-shaped
-        # because it is gated on the terrain doing the lifting, and the trade
-        # term wraps.  A rectangular fade was leaving a soft-edged box of sky.
-        return (np.clip(0.42 * broken * base + 0.42 * lift, 0.0, 1.0)
-                * self.cloud_gain), lift
 
     def _cloud_shadow(self, points, sun_dir, frame, st):
         """Shadow of the deck on whatever is beneath it.
@@ -620,16 +585,29 @@ class Renderer:
         # --- clouds and rain veils ------------------------------------------
         alpha, lift, cvis = self._clouds(origin, dirs, t_any, frame, st)
         cloud_lit = 0.55 + 0.45 * strength
-        cloud_col = (np.array([0.86, 0.87, 0.90]) * cloud_lit
+        cloud_col = (np.array([0.80, 0.82, 0.86] ) * cloud_lit
                      + np.array([0.24, 0.26, 0.34]) * (1 - cloud_lit))
+
+        # Shade the deck by its own slope.  The cloud top is a surface; treating
+        # it as one is the difference between weather and a white sheet.
+        shading = np.ones(dirs.shape[0])
+        if self._cloud_slope is not None:
+            gx, gy = self._cloud_slope
+            scale = 900.0 / self.grid.cell_size_m
+            n = np.stack([-gx * scale, -gy * scale, np.ones_like(gx)], axis=1)
+            n /= np.linalg.norm(n, axis=1, keepdims=True)
+            shading = 0.62 + 0.55 * np.clip(n @ sun_dir, 0.0, 1.0)
+
         # Rain-bearing cloud is darker underneath, which is how a squall reads.
-        heavy = np.clip(lift * cloud * 1.6, 0.0, 1.0)
-        base_col = cloud_col[None, :] * (1.0 - 0.62 * heavy[:, None])
+        # `lift` is now literally the rain rate under that patch of deck.
+        heavy = np.clip(lift, 0.0, 1.0)
+        base_col = (cloud_col[None, :] * shading[:, None]
+                    * (1.0 - 0.62 * heavy[:, None]))
         if moon_elev > 0.0 and sun_elev < 0.0:
             base_col = base_col * (0.06 + moonlight * 4.0)
         rgb = rgb * (1 - alpha[:, None]) + base_col * alpha[:, None]
 
-        rain = np.clip(heavy - 0.35, 0.0, 1.0) * 0.42 * cvis
+        rain = np.clip(heavy - 0.15, 0.0, 1.0) * 0.55 * cvis
         rgb = rgb * (1 - rain[:, None]) + (base_col * 0.75) * rain[:, None]
 
         img = rgb.reshape(self.height, self.width, 3)
